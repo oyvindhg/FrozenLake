@@ -1,19 +1,23 @@
 import gym
+import iteration
 
 if __name__ == "__main__":
-#    env = gym.make('FrozenLake-v0')
+
+    #g is the discount factor
+    g = 0.9
+
+    Q, pol = iteration.value_iteration(g)
+
 
     env = gym.make('FrozenLake-v0')
 
-    print(env.action_space)
-    print(env.observation_space)
     for i_episode in range(1):
         observation = env.reset()
         for t in range(1000):
             env.render()
-            #print(observation)
-            action = env.action_space.sample()
+            action = pol[observation]
             observation, reward, done, info = env.step(action)
             if done:
+                env.render()
                 print("Episode finished after {} timesteps".format(t + 1))
                 break
