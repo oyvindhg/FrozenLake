@@ -1,13 +1,13 @@
 import gym
-import iteration
+import policy_iteration
 
 if __name__ == "__main__":
 
     #g is the discount factor
     g = 0.9
 
-    Q, pol = iteration.value_iteration(g)
-
+    V, pol = policy_iteration.policy_iteration(g)
+    #Q, pol = iteration.value_iteration(g)
 
     env = gym.make('FrozenLake-v0')
 
