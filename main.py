@@ -1,23 +1,21 @@
 import gym
 import policy_iteration
+import value_iteration
+import Q_learning
+import plot
 
 if __name__ == "__main__":
+
+    #plot.plot_board(4, 4, 0, [5, 7, 11, 12], 15)
 
     #g is the discount factor
     g = 0.9
 
-    V, pol = policy_iteration.policy_iteration(g)
-    #Q, pol = iteration.value_iteration(g)
-
     env = gym.make('FrozenLake-v0')
 
-    for i_episode in range(1):
-        observation = env.reset()
-        for t in range(1000):
-            env.render()
-            action = pol[observation]
-            observation, reward, done, info = env.step(action)
-            if done:
-                env.render()
-                print("Episode finished after {} timesteps".format(t + 1))
-                break
+    Q_learning.run_q(env, g)
+    #policy_iteration.run_pi(env, g)
+    #value_iteration.run_vi(env, g)
+
+
+
