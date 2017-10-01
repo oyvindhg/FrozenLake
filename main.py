@@ -2,6 +2,7 @@ import gym
 import policy_iteration
 import value_iteration
 import Q_learning
+import policy_gradient
 import plot
 
 if __name__ == "__main__":
@@ -13,7 +14,7 @@ if __name__ == "__main__":
 
     env = gym.make('FrozenLake-v0')
 
-    Q_learning.run_q(env, g)
+    #Q_learning.run_q(env, g)
     #policy_iteration.run_pi(env, g)
     #value_iteration.run_vi(env, g)
 
