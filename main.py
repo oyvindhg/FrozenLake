@@ -14,6 +14,8 @@ if __name__ == "__main__":
 
     env = gym.make('FrozenLake-v0')
 
+    policy_gradient.run_pg(env, g)
+
     #Q_learning.run_q(env, g)
     #policy_iteration.run_pi(env, g)
     #value_iteration.run_vi(env, g)
