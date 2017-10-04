@@ -1,4 +1,5 @@
-
+#import os
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
 
 def discount_rewards(r, g):
@@ -28,7 +29,6 @@ def run_pg(env, g):
 
     # 2: Build the neural network
     network_input = tf.placeholder(tf.float32, shape=[None, n_inputs])
-
     hidden = fully_connected(network_input, n_hidden, activation_fn=tf.nn.elu, weights_initializer=initializer)
     logits = fully_connected(hidden, n_outputs, activation_fn=None, weights_initializer=initializer)
     outputs = tf.nn.softmax(logits)
@@ -36,7 +36,7 @@ def run_pg(env, g):
 
     # 3: Select a random action based on the estimated probabilities
     p_actions = tf.concat(axis=1, values=[outputs])
-    sel_action = tf.multinomial(tf.log(p_actions), num_samples=1)
+    sel_action = tf.multinomial(tf.log(p_actions), num_samples=1)[0][0]
 
 
     # 4: Define functions for policy gradient
@@ -46,24 +46,34 @@ def run_pg(env, g):
     indexes = tf.range(0, tf.shape(outputs)[0]) * tf.shape(outputs)[1] + action_holder
 
     responsible_outputs = tf.gather(tf.reshape(outputs, [-1]), indexes)
+
+    chosen_output = tf.gather(outputs[0][:], action_holder)
+
     tvars = tf.trainable_variables()
 
-    loss = -tf.reduce_mean(tf.log(responsible_outputs) * reward_holder)
+    loss = -tf.reduce_mean(tf.log(responsible_outputs) * reward_holder) #Create value for action that led to some reward
     gradients = tf.gradients(loss, tvars)
 
+    gradient_holders = []
+    for i, var in enumerate(tvars):
+        placeholder = tf.placeholder(tf.float32, name=str(i) + '_holder')
+        gradient_holders.append(placeholder)
 
-    # 5: Initialize network
-    optimizer = tf.train.AdamOptimizer(learning_rate)
-    init = tf.global_variables_initializer()
 
-
-    # 6: Function for getting best output
+    # 5: Function for getting best output
     best_action = tf.argmax(outputs, 1)
 
 
+    # 6: Initialize network
+    optimizer = tf.train.AdamOptimizer(learning_rate)
+    update_batch = optimizer.apply_gradients(zip(gradient_holders, tvars))
+
+    init = tf.global_variables_initializer()
+
+
     # 7: Training
-    total_episodes = 1  # Set total number of episodes to train agent on
-    max_steps = 5       # Set maximum number of steps per episode
+    total_episodes = 2  # Set total number of episodes to train agent on
+    max_steps = 1       # Set maximum number of steps per episode
     ep_per_update = 5   # Train the policy after this number of episodes
 
 
@@ -73,16 +83,28 @@ def run_pg(env, g):
         ep_count = 0
         total_reward = []
 
-        ind = sess.run(outputs, feed_dict={network_input: [[0]]})
-        print(ind)
-        print('lol')
+        ind = sess.run(responsible_outputs, feed_dict={network_input: [[0]],  action_holder: [0]})
+        #print(ind)
+
+        ind2 = sess.run(chosen_output, feed_dict={network_input: [[0]], action_holder: [0]})
+        #print(ind2)
+        #print('lol')
+
+        some = []
+        some.append([2])
+        some.append([3])
+        some_s = np.vstack(some)
+        #print(some_s[:,:])
+        #print(some_s.size)
 
         gradBuffer = sess.run(tf.trainable_variables())
         for i, grad in enumerate(gradBuffer):
             gradBuffer[i] = grad * 0
 
+        print('after')
+
         while ep_count < total_episodes:
-            print(tf.argmax(outputs, 1))
+
             ep_count += 1
             obs = env.reset()
             ep_reward = 0
@@ -96,8 +118,9 @@ def run_pg(env, g):
                 action = sess.run(sel_action, feed_dict={network_input: obs.reshape(1, n_inputs)})
                 action_history.append(action)
 
-                obs, reward, done, info = env.step(action[0][0])
+                obs, reward, done, info = env.step(action)
                 obs = np.array(obs)
+
                 reward_history.append(reward)
 
                 ep_reward += reward
@@ -105,17 +128,38 @@ def run_pg(env, g):
                 if done == True:
                     break
 
-            #Update the network
+            #Calculate gradients
             reward_history = discount_rewards(reward_history, g)
-            obs_history_stacked = np.vstack(obs_history)
-            print(obs_history)
-            print(obs_history_stacked)
+            obs_history = np.vstack(obs_history)
 
             feed_dict={reward_holder: reward_history,
                        action_holder: action_history,
-                       network_input: obs_history_stacked}
+                       network_input: obs_history}
 
-            #grads = sess.run(gradients, feed_dict=feed_dict)
+            #print(obs_history)
+            #print(action_history)
+            #print(reward_history)
+
+            gradBuffer = sess.run(tf.trainable_variables())
+            for delete_later, grad in enumerate(gradBuffer):
+                print(grad)
+
+            grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [1],network_input: [[0]]})
+
+            for i, grad in enumerate(grads):
+                gradBuffer[i] += grad
+                print(grad)
+
+            feed_dict = dict(zip(gradient_holders, gradBuffer))
+            sess.run(update_batch, feed_dict=feed_dict)
+
+            gradBuffer = sess.run(tf.trainable_variables())
+            for delete_later, grad in enumerate(gradBuffer):
+                print(grad)
+
+            for i, grad in enumerate(gradBuffer):
+                gradBuffer[i] = grad * 0
+
 
             total_reward.append(ep_reward)
 
