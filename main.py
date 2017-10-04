@@ -10,7 +10,7 @@ if __name__ == "__main__":
     #plot.plot_board(4, 4, 0, [5, 7, 11, 12], 15)
 
     #g is the discount factor
-    g = 0.9
+    g = 0.99
 
     env = gym.make('FrozenLake-v0')
 
