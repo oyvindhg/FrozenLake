@@ -7,7 +7,7 @@ nactions = 4
 d = enumerate.d
 permanent_states = [5,7,11,12,15]
 
-# Matrix to show which state you end up in by movind in a given direction from any state
+# Matrix to show which state you end up in by moving in a given direction from any state
 M =  [[0 for m in [d.LEFT, d.DOWN, d.RIGHT, d.UP]] for s in range(nrows*ncols)]
 for row in range(nrows):
     for col in range(ncols):

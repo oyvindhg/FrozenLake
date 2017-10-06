@@ -1,5 +1,7 @@
 #import os
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+import frozen_lake_data
 import numpy as np
 
 def discount_rewards(r, g):
@@ -18,20 +20,22 @@ def run_pg(env, g):
     from tensorflow.contrib.layers import fully_connected
 
     # 1: Specify the neural network architecture
-    n_inputs = 1 # one number can specify the state
-    n_hidden = 20 # it's a simple task, we don't need more hidden neurons -LIIIIEEEEESS!
-    n_hidden2 = 20
+    n_inputs = 16 # one number can specify the state
+    n_hidden = 40 # it's a simple task, we don't need more hidden neurons -LIIIIEEEEESS!
+    n_hidden2 = 40
+    n_hidden3 = 100
     n_outputs = 4 # prob of turning left, up, right and down
 
     learning_rate = 0.01
 
-    initializer = tf.contrib.layers.variance_scaling_initializer(1/100)
+    initializer = tf.contrib.layers.variance_scaling_initializer()
 
 
     # 2: Build the neural network
     network_input = tf.placeholder(tf.float32, shape=[None, n_inputs])
     hidden = fully_connected(network_input, n_hidden, activation_fn=tf.nn.elu, weights_initializer=initializer)
-    hidden2 = fully_connected(hidden, n_hidden, activation_fn=tf.nn.elu, weights_initializer=initializer)
+    hidden2 = fully_connected(hidden, n_hidden2, activation_fn=tf.nn.elu, weights_initializer=initializer)
+    #hidden3 = fully_connected(hidden2, n_hidden3, activation_fn=tf.nn.elu, weights_initializer=initializer)
     logits = fully_connected(hidden2, n_outputs, activation_fn=None, weights_initializer=initializer)
     outputs = tf.nn.softmax(logits)
 
@@ -74,7 +78,7 @@ def run_pg(env, g):
 
 
     # 7: Training
-    total_episodes = 1000  # Set total number of episodes to train agent on
+    total_episodes = 100  # Set total number of episodes to train agent on
     max_steps = 1000       # Set maximum number of steps per episode
     ep_per_update = 5   # Train the policy after this number of episodes
 
@@ -84,21 +88,25 @@ def run_pg(env, g):
         sess.run(init)
 
         hmm = sess.run(tf.trainable_variables())
-        for delete_later, grad in enumerate(hmm):
-            print(grad)
+        # for delete_later, grad in enumerate(hmm):
+        #     print(grad)
 
         print('Output prob')
+        pr_state = np.array([0 for i in range(16)])
         for s in range(16):
-            a = sess.run(outputs, feed_dict={network_input: [[s]]})
+            pr_state[s] = 1
+            if s > 0:
+                pr_state[s-1] = 0
+            a = sess.run(outputs, feed_dict={network_input: np.reshape(pr_state, (1, n_inputs))})
             print(a)
 
         ep_count = 0
         total_reward = []
 
-        ind = sess.run(responsible_outputs, feed_dict={network_input: [[0]],  action_holder: [0]})
+        #ind = sess.run(responsible_outputs, feed_dict={network_input: [[0]],  action_holder: [0]})
         #print(ind)
 
-        ind2 = sess.run(chosen_output, feed_dict={network_input: [[0]], action_holder: [0]})
+        #ind2 = sess.run(chosen_output, feed_dict={network_input: [[0]], action_holder: [0]})
         #print(ind2)
         #print('lol')
 
@@ -117,23 +125,51 @@ def run_pg(env, g):
 
         inn = 0
 
-        while ep_count < total_episodes:
+
+        #while ep_count < total_episodes:
+        while(True):
 
             ep_count += 1
+
+            state = [0 for i in range(16)]
+
             obs = env.reset()
+            state[obs] = 1
+
             ep_reward = 0
             obs_history = []
             action_history = []
             reward_history = []
+            state_history = []
             for step in range(max_steps):
 
                 obs_history.append(obs)
+                state_history.append(state)
 
-                action = sess.run(sel_action, feed_dict={network_input: obs.reshape(1, n_inputs)})
+                action = sess.run(sel_action, feed_dict={network_input: np.reshape(state, (1, n_inputs))})
                 action_history.append(action)
 
-                obs, reward, done, info = env.step(action)
-                obs = np.array(obs)
+                state[obs] = 0
+                reward = 0
+                done = False
+                obs2 = frozen_lake_data.M[obs][action]
+                if obs2 == 6:
+                    reward = 1000
+                    done = True
+                elif obs2 in [3, 4, 5]:
+                    reward = 0
+                    done = True
+                elif obs2 == 5:
+                    reward = 1
+                    done = True
+                # else:
+                #     reward = -1
+                #obs2, reward, done, info = env.step(action)
+                obs = np.array(obs2)
+
+                state[obs2] = 1
+
+                #print(state)
 
                 reward_history.append(reward)
 
@@ -147,44 +183,57 @@ def run_pg(env, g):
 
             #Calculate gradients
             reward_history = discount_rewards(reward_history, g)
-            obs_history = np.vstack(obs_history)
+            state_history = np.vstack(state_history)
 
             feed_dict={reward_holder: reward_history,
                        action_holder: action_history,
-                       network_input: obs_history}
+                       network_input: state_history}
 
-            # if ep_reward > 0:
-            #     print('reward:', reward_history)
-            #     print('actions:', action_history)
-            #     print('obs:', obs_history)
+            if ep_reward > 0:
+                print('reward:', reward_history)
+                print('actions:', action_history)
+                print('obs:', obs_history)
 
 
             grads = sess.run(gradients, feed_dict=feed_dict)
 
+            # sss = [0 for s in range(4 * 4)]
             # if inn == 0:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: [[0]]})
+            #     sss[0] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 1:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [3], network_input: [[1]]})
+            #     sss[1] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [3], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 2:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [3], network_input: [[3]]})
+            #     sss[3] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [3], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 3:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: [[4]]})
+            #     sss[4] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 4:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: [[5]]})
+            #     sss[5] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 5:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: [[7]]})
+            #     sss[7] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 6:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [3], network_input: [[8]]})
+            #     sss[8] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [3], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 7:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [1], network_input: [[9]]})
+            #     sss[9] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [1], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 8:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: [[10]]})
+            #     sss[10] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 9:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [2], network_input: [[13]]})
+            #     sss[13] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [2], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 10:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [1], network_input: [[14]]})
+            #     sss[14] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [1], network_input: np.reshape(sss, (1, n_inputs))})
             # elif inn == 11:
-            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: [[2]]})
+            #     sss[2] = 1
+            #     grads = sess.run(gradients, feed_dict={reward_holder: [1], action_holder: [0], network_input: np.reshape(sss, (1, n_inputs))})
             #
             #
             # inn += 1
@@ -219,12 +268,16 @@ def run_pg(env, g):
 
             total_reward.append(ep_reward)
 
-            if ep_count % 1 == 0:
-                print(sum(total_reward[-1000:]))
+            if ep_count % 10 == 0:
+                print(sum(total_reward[-10:]))
 
                 print('Output prob')
+                pr_state = np.array([0 for i in range(16)])
                 for s in range(16):
-                    a = sess.run(outputs, feed_dict={network_input: [[s]]})
+                    pr_state[s] = 1
+                    if s > 0:
+                        pr_state[s - 1] = 0
+                    a = sess.run(outputs, feed_dict={network_input: np.reshape(pr_state, (1, n_inputs))})
                     print(a)
 
                 #print('now new')
@@ -233,8 +286,12 @@ def run_pg(env, g):
                     #print(grad)
 
                 pol = [0 for s in range(4 * 4)]
+                pr_state = np.array([0 for i in range(16)])
                 for s in range(16):
-                    pol[s] = sess.run(best_action, feed_dict = {network_input: [[s]]})
+                    pr_state[s] = 1
+                    if s > 0:
+                        pr_state[s - 1] = 0
+                    pol[s] = sess.run(best_action, feed_dict = {network_input: np.reshape(pr_state, (1, n_inputs))})
 
                 print('Best action')
                 for row in range(4):
