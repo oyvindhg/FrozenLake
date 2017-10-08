@@ -1,10 +1,18 @@
-import enumerate
+def enum(*sequential, **named):
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    return type('Enum', (), enums)
+
+#Using enumerators makes it easier to access the correct element in the matrices
+d = enum('LEFT', 'DOWN', 'RIGHT', 'UP')
 
 nrows = 4
 ncols = 4
+nstates = nrows*ncols
 nactions = 4
 
-d = enumerate.d
+start= 0
+goal = 15
+
 permanent_states = [5,7,11,12,15]
 
 # Matrix to show which state you end up in by moving in a given direction from any state

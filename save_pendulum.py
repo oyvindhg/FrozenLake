@@ -92,56 +92,67 @@ def run_pg(env, g):
 
 
     with tf.Session() as sess:
+
         sess.run(init)
-        ep_c = 0
+
+        ep_count = 0
         total_reward = []
-        total_lenght = []
 
         gradBuffer = sess.run(tf.trainable_variables())
-        for ix, grad in enumerate(gradBuffer):
-            gradBuffer[ix] = grad * 0
+        for i, grad in enumerate(gradBuffer):
+            gradBuffer[i] = grad * 0
 
-        while ep_c < total_episodes:
-            s = env.reset()
-            running_reward = 0
-            ep_history = []
+        #while ep_count < total_episodes:
+        while(True):
+
+            ep_count += 1
+
+            obs = env.reset()
+
+            ep_reward = 0
             obs_history = []
             action_history = []
             reward_history = []
+            for step in range(max_steps):
 
-            for j in range(max_steps):
-                # Probabilistically pick an action given our network outputs.
-                a = sess.run(sel_action, feed_dict={network_input: np.reshape(s, (1, n_inputs))})
+                obs_history.append(obs)
 
-                obs_history.append(s)
+                action = sess.run(sel_action, feed_dict={network_input: np.reshape(obs, (1, n_inputs))})
+                action_history.append(action)
 
-                twist_strength = [(a - 50) / 25]
+                twist_strength = [(action - 50)/25]
+                #print(twist_strength)
 
-                s1, r, d, _ = env.step(twist_strength)  # Get our reward for taking an action given a bandit.
-                ep_history.append([s, a, r, s1])
-                action_history.append(a)
+                obs, reward, done, info = env.step(action)
 
-                s = np.array(s)
+                #reward = -obs[2]*obs[2]
 
-                reward_history.append(r)
+                # if ep_count % 100 == 0:
+                #     env.render()
+                obs = np.array(obs)
 
-                s = s1
-                running_reward += r
-                if d == True:
-                    # Update the network.
+                reward_history.append(reward)
 
+                ep_reward += reward
+
+                if done == True:
                     break
 
+            #Calculate gradients
             reward_history = discount_rewards(reward_history, g)
-            ep_history = np.array(ep_history)
-            ep_history[:, 2] = discount_rewards(ep_history[:, 2], g)
-            feed_dict = {reward_holder: reward_history,
-                         action_holder: action_history, network_input: np.vstack(obs_history)}
+            obs_history = np.vstack(obs_history)
+
+            feed_dict={reward_holder: reward_history,
+                       action_holder: action_history,
+                       network_input: obs_history}
+
             grads = sess.run(gradients, feed_dict=feed_dict)
+
             for i, grad in enumerate(grads):
                 gradBuffer[i] += grad
 
-            if ep_c % ep_per_update == 0 and i != 0:
+
+            if ep_count % ep_per_update == 0 and ep_count != 0:
 
                 feed_dict = dict(zip(gradient_holders, gradBuffer))
                 sess.run(update_batch, feed_dict=feed_dict)
@@ -150,10 +161,8 @@ def run_pg(env, g):
                 for i, grad in enumerate(gradBuffer):
                     gradBuffer[i] = grad * 0
 
-            total_reward.append(running_reward)
 
+            total_reward.append(ep_reward)
 
-                    # Update our running tally of scores.
-            if ep_c % 100 == 0:
+            if ep_count % 100 == 0:
                 print(np.mean(total_reward[-100:]))
-            ep_c += 1

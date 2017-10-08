@@ -1,6 +1,8 @@
 import matplotlib.pylab as plt
+import numpy as np
+import os
 
-def plot_heat(S, nrows, ncols, name):
+def heatplot(S, nrows, ncols, name):
 
     M = [[0 for r in range(nrows)] for s in range(ncols)]
 
@@ -10,7 +12,18 @@ def plot_heat(S, nrows, ncols, name):
 
     fig, ax = plt.subplots()
 
-    ax.matshow(M, cmap=plt.cm.Blues)
+    ax.set_xticks(np.arange(-.5, 10, 1), minor=True);
+    ax.set_yticks(np.arange(-.5, 10, 1), minor=True);
+
+    ax.matshow(M, vmin=0, vmax = 1, cmap=plt.cm.Blues)
+
+    ax.tick_params(which='minor', axis='both', left='off', top='off', right='off', bottom='off', labelleft='off',
+                   labeltop='off',
+                   labelright='off', labelbottom='off')
+
+    ax.tick_params(which='major', axis='both', left='off', top='off', right='off', bottom='off', labelleft='off',
+                   labeltop='off',
+                   labelright='off', labelbottom='off')
 
     for i in range(nrows):
         for j in range(ncols):
@@ -18,26 +31,14 @@ def plot_heat(S, nrows, ncols, name):
             c = round(c,2)
             ax.text(i, j, str(c), va='center', ha='center')
 
-    my_path = '/home/oyvindhg/PycharmProjects/FrozenLake/Plots/'
-    full_name = name + '.png'
-    plt.savefig(my_path + full_name, bbox_inches='tight')
+    ax.grid(which='minor', color='k', linestyle='-', linewidth=1)
+
+    cwd = os.getcwd()
+    full_name = name + '.eps'
+    plt.savefig(cwd + '/Plots/' + full_name, bbox_inches='tight')
 
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(1, 1, 1)
-    # ax.set_aspect('equal')
-    # plt.imshow(M, interpolation='nearest', cmap=plt.cm.Blues)
-    # plt.colorbar()
-    #
-    # labels = range(0, len(M[0]))
-    # plt.xticks(labels)
-    #
-    # labels = range(0, len(M))
-    # plt.yticks(labels)
-    #
-    # plt.show()
-
-def plot_arrow(S, nrows, ncols, name):
+def policy(S, nrows, ncols, name):
 
     W = [[0 for r in range(nrows)] for s in range(ncols)]
     M = [[0 for r in range(nrows)] for s in range(ncols)]
@@ -48,12 +49,26 @@ def plot_arrow(S, nrows, ncols, name):
 
     fig, ax = plt.subplots()
 
+    ax.set_xticks(np.arange(-.5, 10, 1), minor=True);
+    ax.set_yticks(np.arange(-.5, 10, 1), minor=True);
+
     ax.matshow(W, cmap=plt.cm.Blues)
+
+    ax.tick_params(which='minor', axis='both', left='off', top='off', right='off', bottom='off', labelleft='off',
+                   labeltop='off',
+                   labelright='off', labelbottom='off')
+
+    ax.tick_params(which='major', axis='both', left='off', top='off', right='off', bottom='off', labelleft='off',
+                   labeltop='off',
+                   labelright='off', labelbottom='off')
 
     for row in range(nrows):
         for col in range(ncols):
             x = 0
             y = 0
+
+            if row*nrows+col in [5,7,11,12,15]:
+                M[row][col] = -1
 
             if M[row][col] == 0:
                 x = -1
@@ -61,21 +76,19 @@ def plot_arrow(S, nrows, ncols, name):
                 y = -1
             elif M[row][col] == 2:
                 x = 1
-            else:
+            elif M[row][col] == 3:
                 y = 1
-            ax.quiver(col, row, x, y)
+            else:
+                continue
+            ax.quiver(col, row, x, y, headaxislength=5, scale=nrows*ncols-2)
 
-    labels = range(0, len(M[0]))
-    plt.xticks(labels)
+    ax.grid(which='minor', color='k', linestyle='-', linewidth=1)
 
-    labels = range(0, len(M))
-    plt.yticks(labels)
+    cwd = os.getcwd()
+    full_name = name + '.eps'
+    plt.savefig(cwd + '/Plots/' + full_name, bbox_inches='tight')
 
-    my_path = '/home/oyvindhg/PycharmProjects/FrozenLake/Plots/'
-    full_name = name + '.png'
-    plt.savefig(my_path + full_name, bbox_inches='tight')
-
-def plot_board(nrows, ncols, start, holes, goal):
+def frozen_lake_board(nrows, ncols, start, holes, goal):
 
     M = [[0 for r in range(nrows)] for s in range(ncols)]
 
@@ -83,14 +96,27 @@ def plot_board(nrows, ncols, start, holes, goal):
         for col in range(ncols):
             if row*nrows + col == start:
                 M[row][col] = 1
+            elif row * nrows + col == goal:
+                M[row][col] = 1
             elif row*nrows + col in holes:
                 M[row][col] = 3
-            elif row * nrows + col == goal:
-                M[row][col] = 2
+            else:
+                M[row][col] = 0
 
     fig, ax = plt.subplots()
 
-    ax.matshow(M, cmap=plt.cm.Blues)
+    ax.set_xticks(np.arange(-.5, 10, 1), minor=True);
+    ax.set_yticks(np.arange(-.5, 10, 1), minor=True);
+
+
+    ax.matshow(M, vmin=0, vmax = 10, cmap=plt.cm.Blues)
+
+    ax.tick_params(which='minor', axis='both', left='off', top='off', right='off', bottom='off', labelleft='off', labeltop='off',
+                   labelright='off', labelbottom='off')
+
+    ax.tick_params(which='major', axis='both', left='off', top='off', right='off', bottom='off', labelleft='off',
+                   labeltop='off',
+                   labelright='off', labelbottom='off')
 
     for row in range(nrows):
         for col in range(ncols):
@@ -101,4 +127,8 @@ def plot_board(nrows, ncols, start, holes, goal):
             elif row * nrows + col == goal:
                 ax.text(col, row, 'Goal', va='center', ha='center')
 
-    plt.savefig('board.png', bbox_inches='tight')
+    ax.grid(which='minor', color='k', linestyle='-', linewidth=1)
+
+    cwd = os.getcwd()
+
+    plt.savefig(cwd + '/Plots/board.eps', bbox_inches='tight')

@@ -252,18 +252,20 @@ def run_pg(env, g):
                 gradBuffer[i] += grad
                 #print(grad)
 
-            feed_dict = dict(zip(gradient_holders, gradBuffer))
+            if ep_count % ep_per_update == 0 and ep_count != 0:
 
-            #feed_dict = dict(zip(gradient_holders, grads))
+                feed_dict = dict(zip(gradient_holders, gradBuffer))
 
-            sess.run(update_batch, feed_dict=feed_dict)
+                #feed_dict = dict(zip(gradient_holders, grads))
 
-            #gradBuffer = sess.run(tf.trainable_variables())
-            #for delete_later, grad in enumerate(gradBuffer):
-                #print(grad)
+                sess.run(update_batch, feed_dict=feed_dict)
 
-            for i, grad in enumerate(gradBuffer):
-                gradBuffer[i] = grad * 0
+                #gradBuffer = sess.run(tf.trainable_variables())
+                #for delete_later, grad in enumerate(gradBuffer):
+                    #print(grad)
+
+                for i, grad in enumerate(gradBuffer):
+                    gradBuffer[i] = grad * 0
 
 
             total_reward.append(ep_reward)
