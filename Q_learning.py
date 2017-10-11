@@ -1,38 +1,57 @@
 import frozen_lake_data
 import numpy as np
 import plot
+import math
 
-def run_q(env, g):
+def set_alpha_epsilon(ep, n_episodes, method):
 
-    # The inputs for the function are given in frozen_lake_data.py
-    nrows = frozen_lake_data.nrows
-    ncols = frozen_lake_data.ncols
-    nactions = frozen_lake_data.nactions
-    M = frozen_lake_data.M
-    P = frozen_lake_data.P
-    R = frozen_lake_data.R
+    if method == 'none_high':
+        alpha = 0.1
+        epsilon = 0.1
+
+    elif method == 'alpha_high':
+        alpha = 0.1
+        epsilon = 0.1
+
+    elif method == 'epsilon_high':
+        alpha = 0.1
+        epsilon = 0.5
+    elif method == 'both_high':
+        alpha = 0.3
+        epsilon = 0.5
+    elif method == 'exp':
+        alpha = max(math.exp(-ep/(n_episodes*0.05)),0.1)
+        epsilon = max(math.exp(-ep/(n_episodes*0.05)),0.1)
+    else:
+        raise ValueError("Not a valid method for setting alpha and epsilon")
+
+    return alpha, epsilon
 
 
-    permanent_states = frozen_lake_data.permanent_states
+
+
+def run(env, S, A, n_episodes, max_steps, gamma, method):
+
+    nstates = S[0]*S[1]
+    nactions = A
 
     # Q_pi(s,a): Expected value, starting in state s of doing action a
-    Q = [[0 for a in range(nactions)] for s in range(nrows * ncols)]
+    Q = [[0 for a in range(nactions)] for s in range(nstates)]
 
     # V_pi(s): Expected value in state s. Only used for plotting!
-    V = [0 for s in range(nrows * ncols)]
+    V = [0 for s in range(nstates)]
 
+    rewards = []
 
-    stable = False
-    alpha = 0.2
-    epsilon = 0.2
+    for ep in range(n_episodes):
 
-    total_rew = 0
-
-    for i_episode in range(10000):
+        rewards.append(0)
 
         s = env.reset()
 
-        for t in range(1000):
+        for step in range(max_steps):
+
+            alpha, epsilon = set_alpha_epsilon(ep, n_episodes, method)
 
             current_best_action = Q[s].index(max(Q[s]))
 
@@ -43,39 +62,30 @@ def run_q(env, g):
             a = np.random.choice(nactions, 1, p=action_prob)[0]
             s_next, reward, done, info = env.step(a)
 
-            Q[s][a] = Q[s][a] + alpha*(reward + g * max(Q[s_next]) - Q[s][a])
+            Q[s][a] = Q[s][a] + alpha*(reward + gamma * max(Q[s_next]) - Q[s][a])
 
             s = s_next
 
-            if reward == 1:
-                total_rew += 1
+            rewards[ep] += reward
 
-            if s in permanent_states:
-                #env.render()
-                #print("Episode finished after {} timesteps".format(t + 1))
+            if done:
                 break
 
     # Policy: Best action for every state
-    pol = [0 for s in range(nrows * ncols)]
+    POL = [0 for s in range(nstates)]
 
-    for s in range(nrows * ncols):
-        pol[s] = Q[s].index(max(Q[s]))
+    for s in range(nstates):
+        POL[s] = Q[s].index(max(Q[s]))
 
-    plot_name = 'Q_learning_V'
-    plot.plot_heat(V, nrows, ncols, plot_name)
+    # print('Q:')
+    # for row in range(4):
+    #     print(Q[row * 4], Q[row * 4 + 1], Q[row * 4 + 2], Q[row * 4 + 3])
+    #
+    # print('pol:')
+    # for row in range(4):
+    #     print(pol[row * 4], pol[row * 4 + 1], pol[row * 4 + 2], pol[row * 4 + 3])
 
-    plot_name = 'Q_learning_pol'
-    plot.plot_arrow(pol, nrows, ncols, plot_name)
-
-    print('Q:')
-    for row in range(4):
-        print(Q[row * 4], Q[row * 4 + 1], Q[row * 4 + 2], Q[row * 4 + 3])
-
-    print('pol:')
-    for row in range(4):
-        print(pol[row * 4], pol[row * 4 + 1], pol[row * 4 + 2], pol[row * 4 + 3])
-
-    print(total_rew)
+    return POL, rewards
 
 
 

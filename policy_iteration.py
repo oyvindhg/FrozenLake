@@ -26,7 +26,7 @@ def optimize(env, S, A, M, P, R, gamma, theta):
 
         if count in range(4):
             plot_name = 'pol_iter_POL_' + str(count-1)
-            plot.policy(POL, nrows, ncols, plot_name)
+            #plot.policy(POL, nrows, ncols, plot_name)
 
 
         # Policy evaluation
@@ -63,7 +63,7 @@ def optimize(env, S, A, M, P, R, gamma, theta):
 
         if count in range(4):
             plot_name = 'pol_iter_V_' + str(count)
-            plot.heatplot(V, nrows, ncols, plot_name)
+            #plot.heatplot(V, nrows, ncols, plot_name)
 
         # print('POL:')
         # for row in range(4):
@@ -76,7 +76,11 @@ def optimize(env, S, A, M, P, R, gamma, theta):
         # print('Q:')
         # for row in range(4):
         #     print(Q[row * 4], Q[row * 4 + 1], Q[row * 4 + 2], Q[row * 4 + 3])
+    plot_name = 'pol_iter_POL_' + str(count - 1)
+    #plot.policy(POL, nrows, ncols, plot_name)
 
+    plot_name = 'pol_iter_V_' + str(count)
+    #plot.heatplot(V, nrows, ncols, plot_name)
 
 
     #print('Nr of iterations: ', count)

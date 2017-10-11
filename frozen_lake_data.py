@@ -7,7 +7,6 @@ d = enum('LEFT', 'DOWN', 'RIGHT', 'UP')
 
 nrows = 4
 ncols = 4
-nstates = nrows*ncols
 nactions = 4
 
 start= 0

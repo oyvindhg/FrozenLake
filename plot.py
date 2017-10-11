@@ -2,6 +2,47 @@ import matplotlib.pylab as plt
 import numpy as np
 import os
 
+def annotateplot(x,y,n,xlabel, ylabel, nlabel, plotname, fname):
+
+    fig, ax = plt.subplots()
+
+    ax.scatter(x, y)
+    q = ax.plot(x, y, label=nlabel)
+
+
+    for i, txt in enumerate(n):
+        ax.annotate(txt, (x[i], y[i]))
+    plt.title(plotname)
+    plt.grid(True)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+
+    plt.legend(handles=q)
+
+    cwd = os.getcwd()
+    full_name = fname + '.eps'
+    plt.savefig(cwd + '/Plots/' + full_name, bbox_inches='tight')
+
+def xyplot(x, y, legends, xlabel, ylabel, plotname, name):
+
+    fig, ax = plt.subplots()
+
+    for i in range(len(y)):
+        plt.plot(x, y[i], label=legends[i])
+        plt.legend()
+
+    start, end = ax.get_ylim()
+    ax.yaxis.set_ticks(np.arange(0, end, 10))
+
+    plt.title(plotname)
+    plt.grid(True)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    cwd = os.getcwd()
+    full_name = name + '.eps'
+    plt.savefig(cwd + '/Plots/' + full_name, bbox_inches='tight')
+
+
 def heatplot(S, nrows, ncols, name):
 
     M = [[0 for r in range(nrows)] for s in range(ncols)]

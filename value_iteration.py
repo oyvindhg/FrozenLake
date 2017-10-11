@@ -60,4 +60,4 @@ def optimize(env, S, A, M, P, R, gamma, theta):
     for row in range(4):
         print(POL[row * 4], POL[row * 4 + 1], POL[row * 4 + 2], POL[row * 4 + 3])
 
-    return POL
+    return POL, V, count
