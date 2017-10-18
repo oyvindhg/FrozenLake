@@ -5,6 +5,8 @@ import Q_learning
 import policy_gradient
 import policy_grad_cart
 import policy_grad_pendulum
+import policy_grad_cart_chapter
+import policy_grad_cart_chapter2
 import plot
 import frozen_lake_data
 import save_pendulum
@@ -13,7 +15,7 @@ if __name__ == "__main__":
 
     #Specify what we want to do
     problem = 'frozen_lake'
-    method = 'Q_learning'
+    method = 'pol_iter'
     run_simulation = False
 
 
@@ -47,7 +49,7 @@ if __name__ == "__main__":
             I = [0 for s in range(len(theta))]
 
             for i in range(len(theta)):
-                POL, V, t = value_iteration.optimize(env, S, A, M, P, R, gamma, theta[i])
+                POL, V, t = value_iteration.run(env, S, A, M, P, R, gamma, theta[i])
 
                 I[i] = t
                 for s in range(nrows * ncols):
@@ -67,7 +69,8 @@ if __name__ == "__main__":
             # theta is the convergence parameter
             theta = 0.001
 
-            POL = policy_iteration.optimize(env, S, A, M, P, R, gamma, theta)
+            POL = policy_iteration.run(env, S, A, M, P, R, gamma, theta)
+
 
 
 
@@ -93,7 +96,7 @@ if __name__ == "__main__":
 
                 if method == 'opt':
                     n_episodes = 20000
-                    POL = policy_iteration.optimize(env, S, A, M, P, R, gamma, 0.001)
+                    POL = policy_iteration.run(env, S, A, M, P, R, gamma, 0.001)
                 else:
                     POL, rewards = Q_learning.run(env, S, A, n_episodes, max_steps, gamma, method)
 
@@ -126,8 +129,6 @@ if __name__ == "__main__":
 
             plot.xyplot(range(i),q_learning_rewards, legends, 'Episodes (hundreds)','Reward','Q-learning performance','Q_learning')
 
-
-
         if run_simulation:
             s = env.reset()
             max_steps = 200
@@ -143,6 +144,13 @@ if __name__ == "__main__":
             env.render()
             print("Episode finished after {} timesteps".format(t + 1))
 
+    elif problem == 'cartpole':
+        env = gym.make('CartPole-v0')
+
+        # gamma is the discount factor
+        gamma = 0.95
+
+        policy_grad_cart_chapter2.run(env, gamma)
 
 
 

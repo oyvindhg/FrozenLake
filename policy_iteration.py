@@ -1,7 +1,7 @@
 import plot
 import random
 
-def optimize(env, S, A, M, P, R, gamma, theta):
+def run(env, S, A, M, P, R, gamma, theta):
 
     nactions = A
     nrows = S[0]

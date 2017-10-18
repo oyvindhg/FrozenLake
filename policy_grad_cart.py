@@ -47,11 +47,11 @@ class agent():
         optimizer = tf.train.AdamOptimizer(learning_rate=lr)
         self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders, tvars))
 
-def run_pg(env, g):
+def run(env, g):
 
     tf.reset_default_graph()  # Clear the Tensorflow graph.
 
-    myAgent = agent(lr=1e-2, s_size=3, a_size=100, h_size=8)  # Load the agent.
+    myAgent = agent(lr=1e-2, s_size=4, a_size=2, h_size=8)  # Load the agent.
 
     total_episodes = 5000  # Set total number of episodes to train agent on.
     max_ep = 999
@@ -80,9 +80,9 @@ def run_pg(env, g):
                 a = np.random.choice(a_dist[0], p=a_dist[0])
                 a = np.argmax(a_dist == a)
 
-                twist_strength = [(a - 50) / 25]
+                #twist_strength = [(a - 50) / 25]
 
-                s1, r, d, _ = env.step(twist_strength)  # Get our reward for taking an action given a bandit.
+                s1, r, d, _ = env.step(a)  # Get our reward for taking an action given a bandit.
 
                 #s1, r, d, _ = env.step(a)  # Get our reward for taking an action given a bandit.
                 ep_history.append([s, a, r, s1])
