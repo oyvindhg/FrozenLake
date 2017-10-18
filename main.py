@@ -2,11 +2,13 @@ import gym
 import policy_iteration
 import value_iteration
 import Q_learning
-import policy_gradient
+import policy_gradient_old
 import policy_grad_cart
 import policy_grad_pendulum
 import policy_grad_cart_chapter
 import policy_grad_cart_chapter2
+import policy_gradient
+import policy_gradient_frozenlake
 import plot
 import frozen_lake_data
 import save_pendulum
@@ -14,8 +16,8 @@ import save_pendulum
 if __name__ == "__main__":
 
     #Specify what we want to do
-    problem = 'frozen_lake'
-    method = 'pol_iter'
+    problem = 'cartpole'
+    method = 'pol_grad'
     run_simulation = False
 
 
@@ -129,6 +131,26 @@ if __name__ == "__main__":
 
             plot.xyplot(range(i),q_learning_rewards, legends, 'Episodes (hundreds)','Reward','Q-learning performance','Q_learning')
 
+
+        elif method == 'pol_grad':
+            env = gym.make('FrozenLake-v0')
+
+            # gamma is the discount factor
+            gamma = 0.95
+
+            learning_rate = 1e-2
+            n_states = 16
+            n_actions = 4
+            hidden_layer_size = [8]
+
+            total_episodes = 5000  # Set total number of episodes to train agent on.
+            max_steps = 999
+            ep_per_update = 5
+
+            policy_gradient_frozenlake.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps,
+                                ep_per_update, gamma)
+
+
         if run_simulation:
             s = env.reset()
             max_steps = 200
@@ -145,16 +167,42 @@ if __name__ == "__main__":
             print("Episode finished after {} timesteps".format(t + 1))
 
     elif problem == 'cartpole':
+
         env = gym.make('CartPole-v0')
 
         # gamma is the discount factor
         gamma = 0.95
 
-        policy_grad_cart_chapter2.run(env, gamma)
+        learning_rate =1e-2
+        n_states = 4
+        n_actions = 2
+        hidden_layer_size = [8]
 
+        total_episodes = 5000  # Set total number of episodes to train agent on.
+        max_steps = 999
+        ep_per_update = 5
 
+        policy_gradient.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps,
+                            ep_per_update, gamma)
 
+    elif problem == 'pendulum':
 
+        env = gym.make('Pendulum-v0')
+
+        # gamma is the discount factor
+        gamma = 0.95
+
+        learning_rate = 1e-2
+        n_states = 3
+        n_actions = 4
+        hidden_layer_size = [8]
+
+        total_episodes = 5000  # Set total number of episodes to train agent on.
+        max_steps = 999
+        ep_per_update = 5
+
+        policy_gradient.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps,
+                            ep_per_update, gamma)
 
     #env = gym.make('CartPole-v0')
     #env = gym.make('Pendulum-v0')
@@ -172,7 +220,3 @@ if __name__ == "__main__":
     #         action = [-1.6]
     #         s, reward, done, info = env.step(action)
     #         env.render()
-
-    #Q_learning.run_q(env, g)
-    #policy_iteration.run_pi(env, g)
-    #value_iteration.run_vi(env, g)

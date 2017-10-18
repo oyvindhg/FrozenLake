@@ -22,6 +22,9 @@ class network():
         self.responsible_outputs = tf.gather(tf.reshape(self.output, [-1]), self.indexes)
         self.loss = -tf.reduce_mean(tf.log(self.responsible_outputs) * self.reward_holder)
 
+        #Find the best action
+        self.best_action = tf.argmax(self.output, 1)
+
         # Functions for calculating the gradients
         tvars = tf.trainable_variables()
         self.gradients = tf.gradients(self.loss, tvars)
@@ -72,21 +75,25 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             obs = env.reset()
 
             ep_reward = 0
+            state = [0 for i in range(16)]
+            state[obs] = 1
             obs_history = []
             action_history = []
             reward_history = []
             for step in range(max_steps):
 
-                obs_history.append(obs)
-                action = sess.run(actor.select_action, feed_dict={actor.input: [obs]})
+                obs_history.append(state)
+                action = sess.run(actor.select_action, feed_dict={actor.input: [state]})
                 action_history.append(action)
 
-                #twist = [(action - 2) / 1]
-                twist = action
 
-                obs, reward, done, info = env.step(twist)
-                if ep_count % 100 == 0:
-                    env.render()
+                state[obs] = 0
+                obs, reward, done, info = env.step(action)
+
+                #if ep_count % 100 == 0:
+                    #env.render()
+
+                state[obs] = 1
 
                 reward_history.append(reward)
                 ep_reward += reward
@@ -94,7 +101,7 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
                 if done == True:
                     break
 
-            reward_history = discount_rewards(reward_history, gamma, baseline=True)
+            reward_history = discount_rewards(reward_history, gamma, baseline=False)
             obs_history = np.vstack(obs_history)
 
             feed_dict={actor.reward_holder: reward_history,
@@ -120,3 +127,24 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
 
             if ep_count % 100 == 0:
                 print(np.mean(total_reward[-100:]))
+
+                pol = [0 for s in range(4 * 4)]
+                pr_state = np.array([0 for i in range(16)])
+                for s in range(16):
+                    pr_state[s] = 1
+                    if s > 0:
+                        pr_state[s - 1] = 0
+                    pol[s] = sess.run(actor.best_action, feed_dict={actor.input: [pr_state]})
+
+                print('Best action')
+                for row in range(4):
+                    print(pol[row * 4], pol[row * 4 + 1], pol[row * 4 + 2], pol[row * 4 + 3])
+
+                print('Output prob')
+                pr_state = np.array([0 for i in range(16)])
+                for s in range(16):
+                    pr_state[s] = 1
+                    if s > 0:
+                        pr_state[s - 1] = 0
+                    a = sess.run(actor.output, feed_dict={actor.input: [pr_state]})
+                    print(a)
