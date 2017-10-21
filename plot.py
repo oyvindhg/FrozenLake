@@ -32,7 +32,7 @@ def xyplot(x, y, legends, xlabel, ylabel, plotname, name):
         plt.legend()
 
     start, end = ax.get_ylim()
-    ax.yaxis.set_ticks(np.arange(0, end, 10))
+    #ax.yaxis.set_ticks(np.arange(0, end, 10))
 
     plt.title(plotname)
     plt.grid(True)

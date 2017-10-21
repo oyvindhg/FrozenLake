@@ -7,7 +7,9 @@ import policy_grad_cart
 import policy_grad_pendulum
 import policy_grad_cart_chapter
 import policy_grad_cart_chapter2
-import policy_gradient
+import policy_gradient_cartpole
+import policy_gradient_cartpole_baseline
+import policy_gradient_pendulum
 import policy_gradient_frozenlake
 import plot
 import frozen_lake_data
@@ -178,12 +180,16 @@ if __name__ == "__main__":
         n_actions = 2
         hidden_layer_size = [8]
 
-        total_episodes = 5000  # Set total number of episodes to train agent on.
+        total_episodes = 2000  # Set total number of episodes to train agent on.
         max_steps = 999
         ep_per_update = 5
 
-        policy_gradient.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps,
-                            ep_per_update, gamma)
+        rewards = policy_gradient_cartpole_baseline.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
+                                               max_steps, ep_per_update, gamma)
+
+
+        plot.xyplot(range(len(rewards)), [rewards], 'nothing', 'Episodes (hundreds)', 'Reward',
+                    'Policy gradient performance','Pol_gradient_cartpole')
 
     elif problem == 'pendulum':
 
@@ -197,12 +203,15 @@ if __name__ == "__main__":
         n_actions = 4
         hidden_layer_size = [8]
 
-        total_episodes = 5000  # Set total number of episodes to train agent on.
+        total_episodes = 2000  # Set total number of episodes to train agent on.
         max_steps = 999
         ep_per_update = 5
 
-        policy_gradient.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps,
-                            ep_per_update, gamma)
+        rewards = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
+                                               max_steps, ep_per_update, gamma)
+
+        plot.xyplot(range(len(rewards)), [rewards], 'nothing', 'Episodes (hundreds)', 'Reward',
+                    'Policy gradient performance', 'Pol_gradient_pendulum')
 
     #env = gym.make('CartPole-v0')
     #env = gym.make('Pendulum-v0')
