@@ -10,6 +10,7 @@ import policy_grad_cart_chapter2
 import policy_gradient_cartpole
 import policy_gradient_cartpole_baseline
 import policy_gradient_pendulum
+import policy_gradient_pendulum_continuous
 import policy_gradient_frozenlake
 import plot
 import frozen_lake_data
@@ -18,7 +19,7 @@ import save_pendulum
 if __name__ == "__main__":
 
     #Specify what we want to do
-    problem = 'cartpole'
+    problem = 'pendulum'
     method = 'pol_grad'
     run_simulation = False
 
@@ -184,12 +185,12 @@ if __name__ == "__main__":
         max_steps = 999
         ep_per_update = 5
 
-        rewards = policy_gradient_cartpole_baseline.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
+        rewards = policy_gradient_cartpole.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
                                                max_steps, ep_per_update, gamma)
 
 
         plot.xyplot(range(len(rewards)), [rewards], 'nothing', 'Episodes (hundreds)', 'Reward',
-                    'Policy gradient performance','Pol_gradient_cartpole')
+                    'Policy gradient performance','Pol_gradient_cartpole_disc')
 
     elif problem == 'pendulum':
 
@@ -200,18 +201,21 @@ if __name__ == "__main__":
 
         learning_rate = 1e-2
         n_states = 3
-        n_actions = 4
+        n_actions = 10
         hidden_layer_size = [8]
 
         total_episodes = 2000  # Set total number of episodes to train agent on.
         max_steps = 999
         ep_per_update = 5
 
-        rewards = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
-                                               max_steps, ep_per_update, gamma)
+        #rewards = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
+        #                                       max_steps, ep_per_update, gamma)
+
+        rewards = policy_gradient_pendulum_continuous.run(env, learning_rate, n_states, -2, 2, hidden_layer_size,
+                                                          total_episodes, max_steps, ep_per_update, gamma)
 
         plot.xyplot(range(len(rewards)), [rewards], 'nothing', 'Episodes (hundreds)', 'Reward',
-                    'Policy gradient performance', 'Pol_gradient_pendulum')
+                    'Policy gradient performance', 'Pol_gradient_pendulum_bl_10a')
 
     #env = gym.make('CartPole-v0')
     #env = gym.make('Pendulum-v0')

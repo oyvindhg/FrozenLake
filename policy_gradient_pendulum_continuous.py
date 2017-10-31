@@ -4,23 +4,20 @@ import numpy as np
 
 
 class policy_net():
-    def __init__(self, learning_rate, n_states, n_actions, hidden_layer_size):
+    def __init__(self, learning_rate, n_states, action_low, action_high, hidden_layer_size):
 
         # Build the neural network
         self.input = tf.placeholder(shape=[None, n_states], dtype=tf.float32)
         hidden = slim.stack(self.input, slim.fully_connected, hidden_layer_size, activation_fn=tf.nn.relu)
-        self.output = slim.fully_connected(hidden, n_actions, activation_fn=tf.nn.softmax)
+        self.output = slim.fully_connected(hidden, 1, activation_fn=tf.nn.sigmoid)
 
         # Select a random action based on the estimated probabilities
-        self.p_actions = tf.concat(axis=1, values=[self.output])
-        self.select_action = tf.multinomial(tf.log(self.p_actions), num_samples=1)[0][0]
+        self.action_avg = (action_high + action_low)/2
+        self.mean_action = (self.output*(action_high - action_low) + self.action_avg - 0.5*(action_high - action_low))[0][0]
 
         # Functions for calculating loss
-        self.reward_holder = tf.placeholder(shape=[None], dtype=tf.float32)
-        self.action_holder = tf.placeholder(shape=[None], dtype=tf.int32)
-        self.indexes = tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1] + self.action_holder
-        self.responsible_outputs = tf.gather(tf.reshape(self.output, [-1]), self.indexes)
-        self.cost = -tf.reduce_mean(tf.log(self.responsible_outputs) * self.reward_holder)
+        self.action_dist_holder = tf.placeholder(shape=[None], dtype=tf.float32)
+        self.cost = -tf.reduce_mean(tf.log(self.mean_action) * self.action_dist_holder)
 
         # Functions for calculating the gradients
         tvars = tf.trainable_variables()
@@ -79,9 +76,9 @@ def normalize(r):
     return normalized_r
 
 
-def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps, ep_per_update, gamma):
+def run(env, learning_rate, n_states, action_low, action_high, hidden_layer_size, total_episodes, max_steps, ep_per_update, gamma):
 
-    actor = policy_net(learning_rate, n_states, n_actions, hidden_layer_size)
+    actor = policy_net(learning_rate, n_states, action_low, action_high, hidden_layer_size)
 
     baseline = value_net(learning_rate, n_states, hidden_layer_size)
 
@@ -104,20 +101,35 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
 
             obs = env.reset()
 
+            std_dev = 1
+
             ep_reward = 0
             obs_history = []
-            action_history = []
+            obs_history_actor = []
+            action_dist_history = []
+            action_dist_history_actor = []
             reward_history = []
-            value_history = []
             for step in range(max_steps):
 
                 obs_history.append(obs)
-                action = sess.run(actor.select_action, feed_dict={actor.input: [obs]})
-                action_history.append(action)
+                # print(obs)
+                mean_action = sess.run(actor.mean_action, feed_dict={actor.input: [obs]})
 
-                obs, reward, done, info = env.step(action)
-                # if ep_count % 100 == 0:
-                #     env.render()
+
+                action = np.random.normal(mean_action, std_dev)
+                while action < action_low or action > action_high:
+                    action = np.random.normal(mean_action, std_dev)
+
+                action_dist_history.append(action - mean_action)
+
+                # print('mean')
+                # print(mean_action)
+                # print('action', action)
+
+                obs, reward, done, info = env.step([action])
+
+                if ep_count % 100 == 0:
+                    env.render()
 
                 reward_history.append(reward)
                 ep_reward += reward
@@ -134,22 +146,24 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
 
             sess.run(baseline.update_batch, feed_dict={baseline.input: obs_history, baseline.new_value: return_history})
 
-            disc_dell_history = step_weights(dell_history, gamma)
-            norm_dell_history = normalize(dell_history)
+            update_actor = False
+            for i, dell in enumerate(dell_history):
+                if dell > 0:
+                    action_dist_history_actor.append(action_dist_history[i])
+                    obs_history_actor.append(obs_history[i])
+                    update_actor = True
 
-            feed_dict={actor.reward_holder: norm_dell_history,
-                       actor.action_holder: action_history,
-                       actor.input: obs_history}
+            if update_actor:
+                feed_dict={actor.action_dist_holder: action_dist_history_actor,
+                           actor.input: obs_history_actor}
 
-            grads = sess.run(actor.gradients, feed_dict=feed_dict)
+                grads = sess.run(actor.gradients, feed_dict=feed_dict)
 
-
-
-            for i, grad in enumerate(grads):
-                gradBuffer[i] += grad
+                for i, grad in enumerate(grads):
+                    gradBuffer[i] += grad
 
 
-            if ep_count % ep_per_update == 0:
+            if ep_count % ep_per_update == 0: #Mulig feil hvis ingen gradbuffer
                 feed_dict = dict(zip(actor.gradient_holders, gradBuffer))
                 sess.run(actor.update_batch, feed_dict=feed_dict)
 

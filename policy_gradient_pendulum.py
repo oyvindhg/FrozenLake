@@ -3,7 +3,7 @@ import tensorflow.contrib.slim as slim
 import numpy as np
 
 
-class network():
+class policy_net():
     def __init__(self, learning_rate, n_states, n_actions, hidden_layer_size):
 
         # Build the neural network
@@ -34,24 +34,57 @@ class network():
         optimizer = tf.train.AdamOptimizer(learning_rate)
         self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders, tvars))
 
+class value_net():
+    def __init__(self, learning_rate, n_states, hidden_layer_size):
 
-def discount_rewards(r, g, normalize):
+        # Build the neural network
+        self.input = tf.placeholder(shape=[None, n_states], dtype=tf.float32)
+        hidden = slim.stack(self.input, slim.fully_connected, hidden_layer_size, activation_fn=tf.nn.relu)
+        self.output = slim.fully_connected(hidden, 1, activation_fn=None)
+
+        # The error function
+        self.new_value = tf.placeholder(shape=[None], dtype=tf.float32)
+        self.out = tf.reshape(self.output, [-1])
+        self.diffs = self.out - self.new_value
+        self.cost = tf.reduce_mean(tf.nn.l2_loss(self.diffs))
+
+        # Functions for calculating the gradients
+        tvars = tf.trainable_variables()
+        self.gradients = tf.gradients(self.cost, tvars)
+
+        # Update using the gradients
+        optimizer = tf.train.AdamOptimizer(learning_rate)
+        self.update_batch = optimizer.apply_gradients(zip(self.gradients, tvars))
+
+
+def discount_rewards(r, g):
     """ take 1D float array of rewards and compute discounted reward """
     discounted_r = np.zeros(len(r))
     running_add = 0
     for t in reversed(range(0, len(r))):
         running_add = running_add * g + r[t]
         discounted_r[t] = running_add
-    if normalize:
-        mean = discounted_r.mean()
-        std = discounted_r.std()
-        discounted_r = (discounted_r-mean)/std
     return discounted_r
+
+def step_weights(r, g):
+    weighted_r = np.zeros(len(r))
+    for t in range(0, len(r)):
+        weighted_r[t] = r[t] * pow(g, t)
+    return weighted_r
+
+def normalize(r):
+    mean = r.mean()
+    std = r.std()
+    normalized_r = (r-mean)/std
+    return normalized_r
 
 
 def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps, ep_per_update, gamma):
 
-    actor = network(learning_rate, n_states, n_actions, hidden_layer_size)
+    actor = policy_net(learning_rate, n_states, n_actions, hidden_layer_size)
+
+    baseline = value_net(learning_rate, n_states, hidden_layer_size)
+
     init = tf.global_variables_initializer()
 
     with tf.Session() as sess:
@@ -75,17 +108,18 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             obs_history = []
             action_history = []
             reward_history = []
+            value_history = []
             for step in range(max_steps):
 
                 obs_history.append(obs)
                 action = sess.run(actor.select_action, feed_dict={actor.input: [obs]})
                 action_history.append(action)
-
-                action_strength = [round((action - n_actions/2) / (n_actions/4))]
+                action_strength = [round((action - n_actions / 2) / (n_actions / 4))]
 
                 obs, reward, done, info = env.step(action_strength)
-                # if ep_count % 100 == 0:
-                #     env.render()
+
+                if ep_count % 100 == 0:
+                    env.render()
 
                 reward_history.append(reward)
                 ep_reward += reward
@@ -93,14 +127,27 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
                 if done == True:
                     break
 
-            reward_history = discount_rewards(reward_history, gamma, normalize=True)
+            reward_history = discount_rewards(reward_history, gamma)
             obs_history = np.vstack(obs_history)
 
-            feed_dict={actor.reward_holder: reward_history,
+            return_history = reward_history
+            value_history = sess.run(baseline.output, feed_dict={baseline.input: obs_history})
+            dell_history = return_history - value_history[:][0]
+
+            sess.run(baseline.update_batch, feed_dict={baseline.input: obs_history, baseline.new_value: return_history})
+
+            #I GET IT NOW. LOOK AT SUTTON BARTO. IT IS dell * nabla (value of the state v). Not nabla (dell). Nei, det blir kanskje det samme (kjerneregel)
+
+            disc_dell_history = step_weights(dell_history, gamma)
+            norm_dell_history = normalize(dell_history)
+
+            feed_dict={actor.reward_holder: norm_dell_history,
                        actor.action_holder: action_history,
                        actor.input: obs_history}
 
             grads = sess.run(actor.gradients, feed_dict=feed_dict)
+
+
 
             for i, grad in enumerate(grads):
                 gradBuffer[i] += grad

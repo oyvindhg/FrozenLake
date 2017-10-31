@@ -35,19 +35,26 @@ class network():
         self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders, tvars))
 
 
-def discount_rewards(r, g, normalize):
+def discount_rewards(r, g):
     """ take 1D float array of rewards and compute discounted reward """
     discounted_r = np.zeros(len(r))
     running_add = 0
     for t in reversed(range(0, len(r))):
         running_add = running_add * g + r[t]
-        discounted_r[t] = running_add
-    if normalize:
-        mean = discounted_r.mean()
-        std = discounted_r.std()
-        discounted_r = (discounted_r-mean)/std
+        discounted_r[t] = running_add * pow(g, t)
     return discounted_r
 
+def step_weights(r, g):
+    weighted_r = np.zeros(len(r))
+    for t in range(0, len(r)):
+        weighted_r[t] = r[t] * pow(g, t)
+    return weighted_r
+
+def normalize(r):
+    mean = r.mean()
+    std = r.std()
+    normalized_r = (r-mean)/std
+    return normalized_r
 
 def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps, ep_per_update, gamma):
 
@@ -91,10 +98,12 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
                 if done == True:
                     break
 
-            reward_history = discount_rewards(reward_history, gamma, normalize=True)
+            return_history = discount_rewards(reward_history, gamma)
+            disc_return_history = step_weights(return_history, gamma)
+            norm_return_history = normalize(return_history)
             obs_history = np.vstack(obs_history)
 
-            feed_dict={actor.reward_holder: reward_history,
+            feed_dict={actor.reward_holder: norm_return_history,
                        actor.action_holder: action_history,
                        actor.input: obs_history}
 
