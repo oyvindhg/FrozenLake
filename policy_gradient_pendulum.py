@@ -98,9 +98,10 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             gradBuffer[i] = grad * 0
 
         avg_rewards = []
-
-        for ep_count in range(1, total_episodes+1):
-        #while(True):
+        ep_count = 0
+        #for ep_count in range(1, total_episodes+1):
+        while(True):
+            ep_count += 1
 
             obs = env.reset()
 
@@ -141,7 +142,7 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             disc_dell_history = step_weights(dell_history, gamma)
             norm_dell_history = normalize(dell_history)
 
-            feed_dict={actor.reward_holder: norm_dell_history,
+            feed_dict={actor.reward_holder: dell_history,
                        actor.action_holder: action_history,
                        actor.input: obs_history}
 
@@ -166,5 +167,6 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
 
             if ep_count % 10 == 0:
                 avg_rewards.append(np.mean(total_reward[-10:]))
+                print('reward:', np.mean(total_reward[-10:]))
 
         return avg_rewards

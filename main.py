@@ -197,25 +197,25 @@ if __name__ == "__main__":
         env = gym.make('Pendulum-v0')
 
         # gamma is the discount factor
-        gamma = 0.95
+        gamma = 0.99
 
         learning_rate = 1e-2
         n_states = 3
         n_actions = 10
-        hidden_layer_size = [8]
+        hidden_layer_size = [8, 8]
 
         total_episodes = 2000  # Set total number of episodes to train agent on.
         max_steps = 999
         ep_per_update = 5
 
         #rewards = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
-        #                                       max_steps, ep_per_update, gamma)
+        #                                       max_steps, ep_per_update, gamma) #Her går rewards helt ned til 200-tallet!!
 
         rewards = policy_gradient_pendulum_continuous.run(env, learning_rate, n_states, -2, 2, hidden_layer_size,
                                                           total_episodes, max_steps, ep_per_update, gamma)
 
         plot.xyplot(range(len(rewards)), [rewards], 'nothing', 'Episodes (hundreds)', 'Reward',
-                    'Policy gradient performance', 'Pol_gradient_pendulum_bl_10a')
+                    'Policy gradient performance', 'Pol_gradient_pendulum_cont')
 
     #env = gym.make('CartPole-v0')
     #env = gym.make('Pendulum-v0')

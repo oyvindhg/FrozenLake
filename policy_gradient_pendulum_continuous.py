@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
+import math
 
 
 class policy_net():
@@ -11,13 +12,14 @@ class policy_net():
         hidden = slim.stack(self.input, slim.fully_connected, hidden_layer_size, activation_fn=tf.nn.relu)
         self.output = slim.fully_connected(hidden, 1, activation_fn=tf.nn.sigmoid)
 
-        # Select a random action based on the estimated probabilities
+        # Convert between outputs and sigmoid
         self.action_avg = (action_high + action_low)/2
-        self.mean_action = (self.output*(action_high - action_low) + self.action_avg - 0.5*(action_high - action_low))[0][0]
+        self.mean_action = ((self.output - 0.5)*(action_high - action_low) + self.action_avg)[0][0]
+        self.action_holder = tf.placeholder(shape=[None], dtype=tf.float32)
+        self.action_sigmoid = (self.action_holder - self.action_avg) / (action_high - action_low) + 0.5
 
-        # Functions for calculating loss
-        self.action_dist_holder = tf.placeholder(shape=[None], dtype=tf.float32)
-        self.cost = -tf.reduce_mean(tf.log(self.mean_action) * self.action_dist_holder)
+        # Function for calculating loss
+        self.cost = -tf.reduce_mean(self.action_sigmoid * tf.log(self.output) + (1 - self.action_sigmoid) * tf.log(1 - self.output))
 
         # Functions for calculating the gradients
         tvars = tf.trainable_variables()
@@ -83,6 +85,7 @@ def run(env, learning_rate, n_states, action_low, action_high, hidden_layer_size
     baseline = value_net(learning_rate, n_states, hidden_layer_size)
 
     init = tf.global_variables_initializer()
+    update_actor = False
 
     with tf.Session() as sess:
 
@@ -95,32 +98,49 @@ def run(env, learning_rate, n_states, action_low, action_high, hidden_layer_size
             gradBuffer[i] = grad * 0
 
         avg_rewards = []
+        var = 1
+        ep_count = 0
+        #for ep_count in range(1, total_episodes+1):
+        while(True):
+            ep_count += 1
+            #print('ep:', ep_count)
 
-        for ep_count in range(1, total_episodes+1):
-        #while(True):
+            if ep_count % 100 == 0:
+                print('ep:', ep_count)
 
             obs = env.reset()
 
-            std_dev = 1
+
 
             ep_reward = 0
             obs_history = []
             obs_history_actor = []
-            action_dist_history = []
-            action_dist_history_actor = []
+            action_history = []
+            action_history_actor = []
             reward_history = []
+
+            #var = max(math.exp(-ep_count / (total_episodes*4)), 0.1)
+            var = 0.01
+
+            #print('var:', var)
+
+            std_dev = np.sqrt(var)
+
             for step in range(max_steps):
 
                 obs_history.append(obs)
                 # print(obs)
                 mean_action = sess.run(actor.mean_action, feed_dict={actor.input: [obs]})
 
-
                 action = np.random.normal(mean_action, std_dev)
                 while action < action_low or action > action_high:
                     action = np.random.normal(mean_action, std_dev)
 
-                action_dist_history.append(action - mean_action)
+                #q = sess.run(actor.action_sigmoid, feed_dict={actor.action_holder: [-2]})
+                #print(q)
+
+
+                action_history.append(action)
 
                 # print('mean')
                 # print(mean_action)
@@ -129,6 +149,8 @@ def run(env, learning_rate, n_states, action_low, action_high, hidden_layer_size
                 obs, reward, done, info = env.step([action])
 
                 if ep_count % 100 == 0:
+                    print('mean:', mean_action)
+                    print('action:', action)
                     env.render()
 
                 reward_history.append(reward)
@@ -146,15 +168,24 @@ def run(env, learning_rate, n_states, action_low, action_high, hidden_layer_size
 
             sess.run(baseline.update_batch, feed_dict={baseline.input: obs_history, baseline.new_value: return_history})
 
-            update_actor = False
+            #if np.mean(dell_history) > 0:
+                #print('dell:', np.mean(dell_history))
+                #var = abs((1 - learning_rate) * var + learning_rate * pow(np.mean(dell_history), 2))
+                #print('var:', var)
+
+            update_buffer = False
             for i, dell in enumerate(dell_history):
                 if dell > 0:
-                    action_dist_history_actor.append(action_dist_history[i])
+                    action_history_actor.append(action_history[i])
                     obs_history_actor.append(obs_history[i])
+                    #print('state:', obs_history[i])
+                    #print('action:', action_history[i])
+
+                    update_buffer = True
                     update_actor = True
 
-            if update_actor:
-                feed_dict={actor.action_dist_holder: action_dist_history_actor,
+            if update_buffer:
+                feed_dict={actor.action_holder: action_history_actor,
                            actor.input: obs_history_actor}
 
                 grads = sess.run(actor.gradients, feed_dict=feed_dict)
@@ -163,11 +194,11 @@ def run(env, learning_rate, n_states, action_low, action_high, hidden_layer_size
                     gradBuffer[i] += grad
 
 
-            if ep_count % ep_per_update == 0: #Mulig feil hvis ingen gradbuffer
+            if ep_count % ep_per_update == 0 and update_actor:
                 feed_dict = dict(zip(actor.gradient_holders, gradBuffer))
                 sess.run(actor.update_batch, feed_dict=feed_dict)
 
-
+                update_actor = False
                 for i, grad in enumerate(gradBuffer):
                     gradBuffer[i] = grad * 0
 
@@ -176,5 +207,6 @@ def run(env, learning_rate, n_states, action_low, action_high, hidden_layer_size
 
             if ep_count % 10 == 0:
                 avg_rewards.append(np.mean(total_reward[-10:]))
+                print('reward:', np.mean(total_reward[-10:]))
 
         return avg_rewards
