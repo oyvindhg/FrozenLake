@@ -208,11 +208,11 @@ if __name__ == "__main__":
         max_steps = 999
         ep_per_update = 5
 
-        #rewards = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
-        #                                       max_steps, ep_per_update, gamma) #Her går rewards helt ned til 200-tallet!!
+        rewards = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
+                                               max_steps, ep_per_update, gamma) #Her går rewards helt ned til 200-tallet!!
 
-        rewards = policy_gradient_pendulum_continuous.run(env, learning_rate, n_states, -2, 2, hidden_layer_size,
-                                                          total_episodes, max_steps, ep_per_update, gamma)
+        #rewards = policy_gradient_pendulum_continuous.run(env, learning_rate, n_states, -2, 2, hidden_layer_size,
+        #                                                  total_episodes, max_steps, ep_per_update, gamma)
 
         plot.xyplot(range(len(rewards)), [rewards], 'nothing', 'Episodes (hundreds)', 'Reward',
                     'Policy gradient performance', 'Pol_gradient_pendulum_cont')

@@ -115,9 +115,11 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
                 obs_history.append(obs)
                 action = sess.run(actor.select_action, feed_dict={actor.input: [obs]})
                 action_history.append(action)
-                action_strength = [round((action - n_actions / 2) / (n_actions / 4))]
+                action_strength = [(action - n_actions / 2) / (n_actions / 4)]
 
                 obs, reward, done, info = env.step(action_strength)
+
+                #reward = action_strength[0]
 
                 if ep_count % 100 == 0:
                     env.render()
@@ -134,6 +136,17 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             return_history = reward_history
             value_history = sess.run(baseline.output, feed_dict={baseline.input: obs_history})
             dell_history = return_history - value_history[:][0]
+
+            # for step in range(len(return_history)):
+            #     print(obs_history[step][:])
+            #     value_history.append(sess.run(baseline.output, feed_dict={baseline.input: [obs_history[step][:]]}))
+            #     dell_history.append(return_history[step] - value_history[step])
+            #     sess.run(baseline.update_batch,
+            #              feed_dict={baseline.input: [obs_history[step][:]], baseline.new_value: [return_history[step]]})
+
+            print('return:', return_history)
+            print('value:', value_history)
+            print('new:', dell_history)
 
             sess.run(baseline.update_batch, feed_dict={baseline.input: obs_history, baseline.new_value: return_history})
 

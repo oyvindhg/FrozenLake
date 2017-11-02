@@ -132,6 +132,8 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             value_history = sess.run(baseline.output, feed_dict={baseline.input: obs_history})
             dell_history = return_history - value_history[:][0]
 
+
+
             sess.run(baseline.update_batch, feed_dict={baseline.input: obs_history, baseline.new_value: return_history})
 
             disc_dell_history = step_weights(dell_history, gamma)
