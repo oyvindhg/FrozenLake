@@ -1,21 +1,21 @@
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
+import random
 
 
 class policy_net():
-    def __init__(self, learning_rate, n_states, n_actions, hidden_layer_size):
+    def __init__(self, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate):
 
         # Build the neural network
-        self.dropout = tf.placeholder(dtype=tf.float32)
         self.input = tf.placeholder(shape=[None, n_states], dtype=tf.float32)
-        dropout_layer = slim.dropout(self.input, 1 - self.dropout)
-        hidden_layer = slim.fully_connected(dropout_layer, hidden_layer_size[0], activation_fn=tf.nn.relu)
+        dropout_layer = slim.dropout(self.input, 1 - dropout_rate, is_training=True)
+        for layer in range(1, len(hidden_layer_size)):
+            hidden_layer = slim.fully_connected(dropout_layer, hidden_layer_size[layer], activation_fn=tf.nn.relu)
+            dropout_layer = slim.dropout(hidden_layer, 1 - dropout_rate, is_training=True)
 
-        #for layer in range(1, len(hidden_layer_size)):
-        #    hidden = slim.fully_connected(dropout, hidden_layer_size[layer], activation_fn=tf.nn.relu)
-        #    dropout = slim.dropout(hidden, 1 - dropout_rate, is_training=True)
-        self.output = slim.fully_connected(hidden_layer, n_actions, activation_fn=tf.nn.softmax) #nan
+        logits = slim.fully_connected(dropout_layer, n_actions)
+        self.output = tf.nn.softmax(logits)
 
         # Select a random action based on the estimated probabilities
         self.p_actions = tf.concat(axis=1, values=[self.output])
@@ -26,7 +26,7 @@ class policy_net():
         self.action_holder = tf.placeholder(shape=[None], dtype=tf.int32)
         self.indexes = tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1] + self.action_holder
         self.responsible_outputs = tf.gather(tf.reshape(self.output, [-1]), self.indexes)
-        self.cost = -tf.reduce_mean(tf.log(self.responsible_outputs) * self.reward_holder)
+        self.cost = -tf.reduce_mean(tf.log(self.responsible_outputs + 1e-20) * self.reward_holder)
 
         # Functions for calculating the gradients
         tvars = tf.trainable_variables()
@@ -96,9 +96,7 @@ def normalize(r):
 
 def run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes, max_steps, ep_per_update, gamma):
 
-    dropout_rate = 0.99999999
-
-    actor = policy_net(learning_rate, n_states, n_actions, hidden_layer_size)
+    actor = policy_net(learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate)
 
     baseline = value_net(learning_rate, n_states, hidden_layer_size)
 
@@ -130,22 +128,27 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate
             for step in range(max_steps):
 
                 obs_history.append(obs)
-                action = sess.run(actor.select_action, feed_dict={actor.input: [obs], actor.dropout: dropout_rate})
+                action = sess.run(actor.select_action, feed_dict={actor.input: [obs]})
 
-                lol = [0.0, 0.0]
+                # If the output (softmax) outputs NAN because all weights are 0, we need to draw randomly.
+                # if action == n_actions:
+                #     action = random.randint(0,n_actions - 1)
+                    #print(action)
+                    # gradBuffer = sess.run(tf.trainable_variables())
+                    #for i, grad in enumerate(gradBuffer):
+                    #    print(grad)
 
-                [c+1 for c in lol]
+                #lol = [0.0, 0.0]
 
-                print(lol)
+                #[c+1 for c in lol]
 
-                u = sess.run(actor.output, feed_dict={actor.input: [obs], actor.dropout: dropout_rate})
+                #print(lol)
 
-                print(u)
+                #u = sess.run(actor.output, feed_dict={actor.input: [obs]})
 
-                return
+                #print(u)
 
-
-                print(action)
+                #print(action)
                 action_history.append(action)
                 action_strength = [(action - n_actions / 2) / (n_actions / 4)]
 
@@ -181,6 +184,10 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate
             # print('value:', value_history)
             # print('dell:', dell_history)
 
+            gradBuffer = sess.run(tf.trainable_variables())
+            # for i, grad in enumerate(gradBuffer):
+            #     print(grad)
+
 
             sess.run(baseline.update_batch, feed_dict={baseline.input: obs_history, baseline.new_value: return_history})
 
@@ -191,12 +198,11 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate
 
             feed_dict={actor.reward_holder: dell_history,
                        actor.action_holder: action_history,
-                       actor.input: obs_history,
-                       actor.dropout: 0}
+                       actor.input: obs_history}
 
-            print('dell:', dell_history)
-            print('action:', action_history)
-            print('obs:', obs_history)
+            # print('dell:', dell_history)
+            # print('action:', action_history)
+            # print('obs:', obs_history)
 
             #for i in range(0,len(dell_history)):
                 #dell_history[i] = -1
@@ -204,8 +210,14 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate
 
             grads = sess.run(actor.gradients, feed_dict=feed_dict)
 
-            print('grads:', grads)
+            #print('grads:', grads)
             for i, grad in enumerate(grads):
+                #clipped_grad = tf.clip_by_norm(grad, 10)
+                #a = tf.norm(grad,2)
+                #print(a.eval())
+                # print('not OK')
+                # print('c:', clipped_grad.eval())
+                # print('g:', grad)
                 gradBuffer[i] += grad
 
 
