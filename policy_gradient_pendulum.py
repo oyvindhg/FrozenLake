@@ -15,7 +15,7 @@ class policy_net():
         #for layer in range(1, len(hidden_layer_size)):
         #    hidden = slim.fully_connected(dropout, hidden_layer_size[layer], activation_fn=tf.nn.relu)
         #    dropout = slim.dropout(hidden, 1 - dropout_rate, is_training=True)
-        self.output = slim.fully_connected(hidden_layer, n_actions, activation_fn=tf.nn.softmax)
+        self.output = slim.fully_connected(hidden_layer, n_actions, activation_fn=tf.nn.softmax) #nan
 
         # Select a random action based on the estimated probabilities
         self.p_actions = tf.concat(axis=1, values=[self.output])
@@ -132,9 +132,18 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate
                 obs_history.append(obs)
                 action = sess.run(actor.select_action, feed_dict={actor.input: [obs], actor.dropout: dropout_rate})
 
-                u = sess.run(tf.multinomial(tf.log([[0.0, 0.0]]), num_samples=1))
+                lol = [0.0, 0.0]
+
+                [c+1 for c in lol]
+
+                print(lol)
+
+                u = sess.run(actor.output, feed_dict={actor.input: [obs], actor.dropout: dropout_rate})
 
                 print(u)
+
+                return
+
 
                 print(action)
                 action_history.append(action)
