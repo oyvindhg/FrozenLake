@@ -7,9 +7,15 @@ class policy_net():
     def __init__(self, learning_rate, n_states, n_actions, hidden_layer_size):
 
         # Build the neural network
+        self.dropout = tf.placeholder(dtype=tf.float32)
         self.input = tf.placeholder(shape=[None, n_states], dtype=tf.float32)
-        hidden = slim.stack(self.input, slim.fully_connected, hidden_layer_size, activation_fn=tf.nn.relu)
-        self.output = slim.fully_connected(hidden, n_actions, activation_fn=tf.nn.softmax)
+        dropout_layer = slim.dropout(self.input, 1 - self.dropout)
+        hidden_layer = slim.fully_connected(dropout_layer, hidden_layer_size[0], activation_fn=tf.nn.relu)
+
+        #for layer in range(1, len(hidden_layer_size)):
+        #    hidden = slim.fully_connected(dropout, hidden_layer_size[layer], activation_fn=tf.nn.relu)
+        #    dropout = slim.dropout(hidden, 1 - dropout_rate, is_training=True)
+        self.output = slim.fully_connected(hidden_layer, n_actions, activation_fn=tf.nn.softmax)
 
         # Select a random action based on the estimated probabilities
         self.p_actions = tf.concat(axis=1, values=[self.output])
@@ -24,6 +30,7 @@ class policy_net():
 
         # Functions for calculating the gradients
         tvars = tf.trainable_variables()
+        self.hm = tvars
         self.gradients = tf.gradients(self.cost, tvars)
         self.gradient_holders = []
         for i, var in enumerate(tvars):
@@ -56,6 +63,14 @@ class value_net():
         optimizer = tf.train.AdamOptimizer(learning_rate)
         self.update_batch = optimizer.apply_gradients(zip(self.gradients, tvars))
 
+def average_rewards(r):
+    """ take 1D float array of rewards and compute discounted reward """
+    averaged_r = np.zeros(len(r))
+    running_add = 0
+    for t in reversed(range(0, len(r))):
+        running_add = running_add + r[t]
+        averaged_r[t] = running_add / (len(r) - t)
+    return averaged_r
 
 def discount_rewards(r, g):
     """ take 1D float array of rewards and compute discounted reward """
@@ -79,7 +94,9 @@ def normalize(r):
     return normalized_r
 
 
-def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps, ep_per_update, gamma):
+def run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes, max_steps, ep_per_update, gamma):
+
+    dropout_rate = 0.99999999
 
     actor = policy_net(learning_rate, n_states, n_actions, hidden_layer_size)
 
@@ -113,13 +130,20 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             for step in range(max_steps):
 
                 obs_history.append(obs)
-                action = sess.run(actor.select_action, feed_dict={actor.input: [obs]})
+                action = sess.run(actor.select_action, feed_dict={actor.input: [obs], actor.dropout: dropout_rate})
+
+                u = sess.run(tf.multinomial(tf.log([[0.0, 0.0]]), num_samples=1))
+
+                print(u)
+
+                print(action)
                 action_history.append(action)
                 action_strength = [(action - n_actions / 2) / (n_actions / 4)]
 
                 obs, reward, done, info = env.step(action_strength)
 
                 #reward = action_strength[0]
+
 
                 if ep_count % 100 == 0:
                     env.render()
@@ -130,10 +154,9 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
                 if done == True:
                     break
 
-            reward_history = discount_rewards(reward_history, gamma)
+            return_history = average_rewards(reward_history)
             obs_history = np.vstack(obs_history)
 
-            return_history = reward_history
             value_history = sess.run(baseline.output, feed_dict={baseline.input: obs_history})
             dell_history = return_history - value_history[:][0]
 
@@ -144,9 +167,11 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             #     sess.run(baseline.update_batch,
             #              feed_dict={baseline.input: [obs_history[step][:]], baseline.new_value: [return_history[step]]})
 
-            print('return:', return_history)
-            print('value:', value_history)
-            print('new:', dell_history)
+            # print('rewards:', reward_history)
+            # print('returns:', return_history)
+            # print('value:', value_history)
+            # print('dell:', dell_history)
+
 
             sess.run(baseline.update_batch, feed_dict={baseline.input: obs_history, baseline.new_value: return_history})
 
@@ -157,19 +182,29 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
 
             feed_dict={actor.reward_holder: dell_history,
                        actor.action_holder: action_history,
-                       actor.input: obs_history}
+                       actor.input: obs_history,
+                       actor.dropout: 0}
+
+            print('dell:', dell_history)
+            print('action:', action_history)
+            print('obs:', obs_history)
+
+            #for i in range(0,len(dell_history)):
+                #dell_history[i] = -1
+                #action_history[i] = 9
 
             grads = sess.run(actor.gradients, feed_dict=feed_dict)
 
-
-
+            print('grads:', grads)
             for i, grad in enumerate(grads):
                 gradBuffer[i] += grad
 
 
             if ep_count % ep_per_update == 0:
+                #print('hmm')
                 feed_dict = dict(zip(actor.gradient_holders, gradBuffer))
                 sess.run(actor.update_batch, feed_dict=feed_dict)
+
 
 
                 for i, grad in enumerate(gradBuffer):

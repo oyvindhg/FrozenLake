@@ -203,15 +203,16 @@ if __name__ == "__main__":
         n_states = 3
         n_actions = 10
         hidden_layer_size = [8, 8]
+        dropout_rate = 0.5
 
         total_episodes = 2000  # Set total number of episodes to train agent on.
         max_steps = 999
         ep_per_update = 5
 
-        rewards = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
+        rewards = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                max_steps, ep_per_update, gamma) #Her går rewards helt ned til 200-tallet!!
 
-        #rewards = policy_gradient_pendulum_continuous.run(env, learning_rate, n_states, -2, 2, hidden_layer_size,
+        #rewards = policy_gradient_pendulum_continuous.run(env, learning_rate, n_states, -2, 2, hidden_layer_size, dropout_rate,
         #                                                  total_episodes, max_steps, ep_per_update, gamma)
 
         plot.xyplot(range(len(rewards)), [rewards], 'nothing', 'Episodes (hundreds)', 'Reward',
