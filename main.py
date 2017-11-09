@@ -202,8 +202,8 @@ if __name__ == "__main__":
         learning_rate = 1e-2
         n_states = 3
         n_actions = 10
-        hidden_layer_size = [8, 8]
-        dropout_rate = 0.2
+        hidden_layer_size = [8]
+        dropout_rate = 0.1
 
         total_episodes = 2000  # Set total number of episodes to train agent on.
         max_steps = 999
