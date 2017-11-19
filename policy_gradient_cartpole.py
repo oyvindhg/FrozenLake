@@ -3,7 +3,7 @@ import tensorflow.contrib.slim as slim
 import numpy as np
 
 
-class network():
+class policy_net():
     def __init__(self, learning_rate, n_states, n_actions, hidden_layer_size):
 
         # Build the neural network
@@ -56,9 +56,10 @@ def normalize(r):
     normalized_r = (r-mean)/std
     return normalized_r
 
-def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps, ep_per_update, gamma):
+def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps, ep_per_update, gamma, norm, group_size):
 
-    actor = network(learning_rate, n_states, n_actions, hidden_layer_size)
+    tf.reset_default_graph()
+    actor = policy_net(learning_rate, n_states, n_actions, hidden_layer_size)
     init = tf.global_variables_initializer()
 
     with tf.Session() as sess:
@@ -72,6 +73,7 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             gradBuffer[i] = grad * 0
 
         avg_rewards = []
+
 
         for ep_count in range(1, total_episodes+1):
         #while(True):
@@ -100,10 +102,11 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
 
             return_history = discount_rewards(reward_history, gamma)
             disc_return_history = step_weights(return_history, gamma)
-            norm_return_history = normalize(return_history)
+            if norm:
+                return_history = normalize(return_history)
             obs_history = np.vstack(obs_history)
 
-            feed_dict={actor.reward_holder: norm_return_history,
+            feed_dict={actor.reward_holder: return_history,
                        actor.action_holder: action_history,
                        actor.input: obs_history}
 
@@ -124,7 +127,7 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
 
             total_reward.append(ep_reward)
 
-            if ep_count % 10 == 0:
-                avg_rewards.append(np.mean(total_reward[-10:]))
+            if ep_count % group_size == 0:
+                avg_rewards.append(np.mean(total_reward[-group_size:]))
 
         return avg_rewards

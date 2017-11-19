@@ -28,8 +28,11 @@ def xyplot(x, y, legends, xlabel, ylabel, plotname, name):
     fig, ax = plt.subplots()
 
     for i in range(len(y)):
-        plt.plot(x, y[i], label=legends[i])
-        plt.legend()
+        if legends[i] == "nothing":
+            plt.plot(x, y[i])
+        else:
+            plt.plot(x, y[i], label=legends[i])
+            plt.legend()
 
     start, end = ax.get_ylim()
     #ax.yaxis.set_ticks(np.arange(0, end, 10))

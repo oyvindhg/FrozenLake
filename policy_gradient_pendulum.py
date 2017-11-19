@@ -99,7 +99,7 @@ def normalize(r):
     return normalized_r
 
 
-def run(env, learning_rate, n_states, n_actions, hidden_layers, dropout_rate, total_episodes, max_steps, ep_per_update, gamma):
+def run(env, learning_rate, n_states, n_actions, hidden_layers, dropout_rate, total_episodes, max_steps, ep_per_update, gamma, group_size):
 
     dropout_rate = 0.2
 
@@ -121,8 +121,8 @@ def run(env, learning_rate, n_states, n_actions, hidden_layers, dropout_rate, to
 
         avg_rewards = []
         ep_count = 0
-        #for ep_count in range(1, total_episodes+1):
-        while(True):
+        for ep_count in range(1, total_episodes+1):
+        #while(True):
             ep_count += 1
 
             obs = env.reset()
@@ -151,8 +151,8 @@ def run(env, learning_rate, n_states, n_actions, hidden_layers, dropout_rate, to
                 #     print('tv:', grad)
 
 
-                if ep_count % 100 == 0:
-                    env.render()
+                # if ep_count % 100 == 0:
+                #     env.render()
 
                 reward_history.append(reward)
                 ep_reward += reward
@@ -219,9 +219,9 @@ def run(env, learning_rate, n_states, n_actions, hidden_layers, dropout_rate, to
 
             total_reward.append(ep_reward)
 
-            if ep_count % 10 == 0:
-                avg_rewards.append(np.mean(total_reward[-10:]))
-                print('reward:', np.mean(total_reward[-10:]))
+            if ep_count % group_size == 0:
+                avg_rewards.append(np.mean(total_reward[-group_size:]))
+                print('reward:', np.mean(total_reward[-group_size:]))
 
         return avg_rewards
 

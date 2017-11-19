@@ -79,7 +79,9 @@ def normalize(r):
     return normalized_r
 
 
-def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps, ep_per_update, gamma):
+def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps, ep_per_update, gamma, group_size):
+
+    tf.reset_default_graph()
 
     actor = policy_net(learning_rate, n_states, n_actions, hidden_layer_size)
 
@@ -139,7 +141,7 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
             disc_dell_history = step_weights(dell_history, gamma)
             norm_dell_history = normalize(dell_history)
 
-            feed_dict={actor.reward_holder: norm_dell_history,
+            feed_dict={actor.reward_holder: dell_history,
                        actor.action_holder: action_history,
                        actor.input: obs_history}
 
@@ -162,7 +164,7 @@ def run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episod
 
             total_reward.append(ep_reward)
 
-            if ep_count % 10 == 0:
-                avg_rewards.append(np.mean(total_reward[-10:]))
+            if ep_count % group_size == 0:
+                avg_rewards.append(np.mean(total_reward[-group_size:]))
 
         return avg_rewards
