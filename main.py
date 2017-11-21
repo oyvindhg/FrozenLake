@@ -19,7 +19,7 @@ import save_pendulum
 if __name__ == "__main__":
 
     #Specify what we want to do
-    problem = 'cartpole'
+    problem = 'pendulum'
     method = 'pol_grad'
     run_simulation = False
 
@@ -188,7 +188,7 @@ if __name__ == "__main__":
         avg_rewards = [[0 for x in range(round(total_episodes / group_size))] for y in
                                   range(0,3)]
 
-        investigate = "ep_per"
+        investigate = "epss_per"
         if investigate == "method":
             for i in range(0,3):
                 if i == 0:
@@ -243,7 +243,7 @@ if __name__ == "__main__":
                     avg_rewards[2] = policy_gradient_cartpole_baseline.run(env, learning_rate, n_states, n_actions,
                                                                            hidden_layer_size, total_episodes,
                                                                            max_steps, ep_per_update, gamma, group_size)
-            legends = ['One-layered net', 'Two-layered net', 'Four-layered net']
+            legends = ['One hidden layer', 'Two hidden layers', 'Four hidden layers']
             plot.xyplot(range(len(avg_rewards[0])), avg_rewards, legends, 'Episodes (tens)', 'Average reward',
                         'Policy gradient performance of varying network depth', 'Pol_gradient_cartpole_depth')
 
@@ -310,25 +310,25 @@ if __name__ == "__main__":
             for i in range(0,3):
                 if i == 0:
                     hidden_layer_size = [8]
-                    avg_rewards[0] = policy_gradient_cartpole_baseline.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
+                    avg_rewards[0] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                    max_steps, ep_per_update, gamma, group_size)
                 elif i == 1:
                     hidden_layer_size = [5, 5]
-                    avg_rewards[1] = policy_gradient_cartpole_baseline.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
+                    avg_rewards[1] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                           max_steps, ep_per_update, gamma, group_size)
                 else:
                     hidden_layer_size = [3, 3, 3, 3]
-                    avg_rewards[2] = policy_gradient_cartpole_baseline.run(env, learning_rate, n_states, n_actions,
-                                                                           hidden_layer_size, total_episodes,
+                    avg_rewards[2] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions,
+                                                                           hidden_layer_size, dropout_rate, total_episodes,
                                                                            max_steps, ep_per_update, gamma, group_size)
-            legends = ['One-layered net', 'Two-layered net', 'Four-layered net']
+            legends = ['One hidden layer', 'Two hidden layers', 'Four hidden layers']
             plot.xyplot(range(len(avg_rewards[0])), avg_rewards, legends, 'Episodes (tens)', 'Average reward',
-                        'Policy gradient performance of varying network depth', 'Pol_gradient_cartpole_depth')
+                        'Policy gradient performance of varying network depth', 'Pol_gradient_pendulum_depth')
         else:
             rewards = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                max_steps, ep_per_update, gamma, group_size)
 
-            plot.xyplot(range(len(rewards)), [rewards], 'nothing', 'Episodes (tens)', 'Reward',
+            plot.xyplot(range(len(rewards)), [rewards], 'nothing', 'Episodes (tens)', 'Average reward',
                        'Policy gradient performance', 'Pol_gradient_pendulum')
 
 
