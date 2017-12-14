@@ -2,28 +2,27 @@ import gym
 import policy_iteration
 import value_iteration
 import Q_learning
-import policy_gradient_old
-import policy_grad_cart
-import policy_grad_pendulum
-import policy_grad_cart_chapter
-import policy_grad_cart_chapter2
 import policy_gradient_cartpole
 import policy_gradient_cartpole_baseline
 import policy_gradient_pendulum
 import policy_gradient_pendulum_continuous
 import policy_gradient_frozenlake
+import policy_gradient_frozenlake_baseline
 import plot
 import frozen_lake_data
-import save_pendulum
 
 if __name__ == "__main__":
 
     #Specify what we want to do
     problem = 'pendulum'
     method = 'pol_grad'
+    investigate = "dropout"
+
     run_simulation = False
 
-
+    POL = [2 for s in range(16)]
+    plot_name = 'pol_iter_pol_grad'
+    plot.policy(POL, 4, 4, plot_name)
 
     if problem == 'frozen_lake':
         env = gym.make('FrozenLake-v0')
@@ -139,18 +138,18 @@ if __name__ == "__main__":
             env = gym.make('FrozenLake-v0')
 
             # gamma is the discount factor
-            gamma = 0.95
+            gamma = 0.99
 
             learning_rate = 1e-2
             n_states = 16
             n_actions = 4
-            hidden_layer_size = [8]
+            hidden_layer_size = [20, 20]
 
             total_episodes = 5000  # Set total number of episodes to train agent on.
             max_steps = 999
             ep_per_update = 5
 
-            policy_gradient_frozenlake.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes, max_steps,
+            policy_gradient_frozenlake_baseline.run(env, 1e-3, n_states, n_actions, hidden_layer_size, total_episodes, max_steps,
                                 ep_per_update, gamma)
 
 
@@ -188,7 +187,7 @@ if __name__ == "__main__":
         avg_rewards = [[0 for x in range(round(total_episodes / group_size))] for y in
                                   range(0,3)]
 
-        investigate = "epss_per"
+
         if investigate == "method":
             for i in range(0,3):
                 if i == 0:
@@ -231,21 +230,21 @@ if __name__ == "__main__":
         else:
             for i in range(0,3):
                 if i == 0:
-                    hidden_layer_size = [8]
+                    hidden_layer_size = [18]
                     avg_rewards[0] = policy_gradient_cartpole_baseline.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
                                                    max_steps, ep_per_update, gamma, group_size)
                 elif i == 1:
-                    hidden_layer_size = [5, 5]
+                    hidden_layer_size = [9, 9]
                     avg_rewards[1] = policy_gradient_cartpole_baseline.run(env, learning_rate, n_states, n_actions, hidden_layer_size, total_episodes,
                                                           max_steps, ep_per_update, gamma, group_size)
                 else:
-                    hidden_layer_size = [3, 3, 3, 3]
+                    hidden_layer_size = [3, 3, 3, 3, 3, 3]
                     avg_rewards[2] = policy_gradient_cartpole_baseline.run(env, learning_rate, n_states, n_actions,
                                                                            hidden_layer_size, total_episodes,
                                                                            max_steps, ep_per_update, gamma, group_size)
-            legends = ['One hidden layer', 'Two hidden layers', 'Four hidden layers']
+            legends = ['One hidden layer', 'Two hidden layers', 'Six hidden layers']
             plot.xyplot(range(len(avg_rewards[0])), avg_rewards, legends, 'Episodes (tens)', 'Average reward',
-                        'Policy gradient performance of varying network depth', 'Pol_gradient_cartpole_depth')
+                        'Policy gradient performance of varying network depth', 'Pol_gradient_cartpole_depth_2')
 
 
     elif problem == 'pendulum':
@@ -257,70 +256,111 @@ if __name__ == "__main__":
 
         learning_rate = 1e-2
         n_states = 3
-        n_actions = 10
-        hidden_layer_size = [8]
+        n_actions = 16
+        hidden_layer_size = [16, 16]
         dropout_rate = 0.0
 
         total_episodes = 10000  # Set total number of episodes to train agent on.
-        max_steps = 999
+        max_steps = 200
         ep_per_update = 5
         group_size = 10
         avg_rewards = [[0 for x in range(round(total_episodes / group_size))] for y in
                        range(0, 3)]
 
 
-        investigate = "hl"
+
         if investigate == "dropout":
             for i in range(0, 3):
                 if i == 0:
-                    avg_rewards[0] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
+                    for j in range(0, 3):
+                        dropout_rate = 0.0
+                        current = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                max_steps, ep_per_update, gamma, group_size)
+                        for k in range(0,len(avg_rewards[0])):
+                            avg_rewards[0][k] += current[k]
                 elif i == 1:
-                    dropout_rate = 0.1
-                    avg_rewards[1] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
+                    for j in range(0, 3):
+                        dropout_rate = 0.2
+                        current = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                max_steps, ep_per_update, gamma, group_size)
+                        for k in range(0,len(avg_rewards[1])):
+                            avg_rewards[1][k] += current[k]
                 else:
-                    dropout_rate = 0.2
-                    avg_rewards[2] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
+                    for j in range(0, 3):
+                        dropout_rate = 0.4
+                        current = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                max_steps, ep_per_update, gamma, group_size)
+                        for k in range(0,len(avg_rewards[2])):
+                            avg_rewards[2][k] += current[k]
 
-            legends = ['No dropout', '10% dropout', '20% dropout']
+            for i in range(3):
+                for j in range(len(avg_rewards[0])):
+                    avg_rewards[i][j] /= 3
+            legends = ['No dropout', '20% dropout', '40% dropout']
             plot.xyplot(range(len(avg_rewards[0])), avg_rewards, legends, 'Episodes (tens)', 'Average reward',
                         'Policy gradient performance with varying dropout rate', 'Pol_gradient_pendulum_dropout')
 
         elif investigate == "actions":
             for i in range(0, 3):
                 if i == 0:
-                    n_actions = 4
-                    avg_rewards[0] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
+                    for j in range(0,3):
+                        n_actions = 4
+                        current = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                max_steps, ep_per_update, gamma, group_size)
+                        for k in range(0,len(avg_rewards[0])):
+                            avg_rewards[0][k] += current[k]
                 elif i == 1:
-                    n_actions = 10
-                    avg_rewards[1] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
+                    for j in range(0,3):
+                        n_actions = 16
+                        current = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                max_steps, ep_per_update, gamma, group_size)
+                        for k in range(0,len(avg_rewards[1])):
+                            avg_rewards[1][k] += current[k]
                 else:
-                    n_actions = 16
-                    avg_rewards[2] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
+                    for j in range(0,3):
+                        n_actions = 24
+                        current = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
                                                max_steps, ep_per_update, gamma, group_size)
+                        for k in range(0,len(avg_rewards[2])):
+                            avg_rewards[2][k] += current[k]
+            for i in range(3):
+                for j in range(len(avg_rewards[0])):
+                    avg_rewards[i][j] /= 3
 
-            legends = ['4 actions', '10 actions', '16 actions']
+            legends = ['4 actions', '16 actions', '24 actions']
             plot.xyplot(range(len(avg_rewards[0])), avg_rewards, legends, 'Episodes (tens)', 'Average reward',
                         'Policy gradient performance with varying number of actions', 'Pol_gradient_pendulum_actions')
         elif investigate == "hl":
             for i in range(0,3):
                 if i == 0:
-                    hidden_layer_size = [8]
-                    avg_rewards[0] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
-                                                   max_steps, ep_per_update, gamma, group_size)
+                    for j in range(0,3):
+                        hidden_layer_size = [32]
+                        current = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions,
+                                                                               hidden_layer_size, dropout_rate, total_episodes,
+                                                                               max_steps, ep_per_update, gamma, group_size)
+                        for k in range(0, len(avg_rewards[0])):
+                            avg_rewards[0][k] += current[k]
                 elif i == 1:
-                    hidden_layer_size = [5, 5]
-                    avg_rewards[1] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions, hidden_layer_size, dropout_rate, total_episodes,
-                                                          max_steps, ep_per_update, gamma, group_size)
+                    for j in range(0,3):
+                        hidden_layer_size = [16, 16]
+                        current = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions,
+                                                                               hidden_layer_size, dropout_rate, total_episodes,
+                                                                               max_steps, ep_per_update, gamma, group_size)
+                        for k in range(0, len(avg_rewards[1])):
+                            avg_rewards[1][k] += current[k]
                 else:
-                    hidden_layer_size = [3, 3, 3, 3]
-                    avg_rewards[2] = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions,
-                                                                           hidden_layer_size, dropout_rate, total_episodes,
-                                                                           max_steps, ep_per_update, gamma, group_size)
+                    for j in range(0,3):
+                        hidden_layer_size = [8, 8, 8, 8]
+                        current = policy_gradient_pendulum.run(env, learning_rate, n_states, n_actions,
+                                                                               hidden_layer_size, dropout_rate, total_episodes,
+                                                                               max_steps, ep_per_update, gamma, group_size)
+                        for k in range(0, len(avg_rewards[2])):
+                            avg_rewards[2][k] += current[k]
+
+            for i in range(3):
+                for j in range(len(avg_rewards[0])):
+                    avg_rewards[i][j] /= 3
+
             legends = ['One hidden layer', 'Two hidden layers', 'Four hidden layers']
             plot.xyplot(range(len(avg_rewards[0])), avg_rewards, legends, 'Episodes (tens)', 'Average reward',
                         'Policy gradient performance of varying network depth', 'Pol_gradient_pendulum_depth')
@@ -332,8 +372,8 @@ if __name__ == "__main__":
                        'Policy gradient performance', 'Pol_gradient_pendulum')
 
 
-        #rewards = policy_gradient_pendulum_continuous.run(env, learning_rate, n_states, -2, 2, hidden_layer_size, dropout_rate,
-        #                                                  total_episodes, max_steps, ep_per_update, gamma)
+            # rewards = policy_gradient_pendulum_continuous.run(env, learning_rate, n_states, -2, 2, hidden_layer_size, dropout_rate,
+            #                                              total_episodes, max_steps, ep_per_update, gamma)
 
 
 

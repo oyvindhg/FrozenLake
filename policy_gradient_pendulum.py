@@ -10,13 +10,16 @@ class policy_net():
 
         # Build the neural network
         self.input = tf.placeholder(shape=[None, n_states], dtype=tf.float32)
+
+        self.istraining = tf.placeholder(tf.bool)
+
         dropout = []
         hidden = []
         #dropout.append(slim.dropout(self.input, 1 - dropout_rate, is_training=True))
         dropout.append(self.input)
         for layer in range(0, len(hidden_layers)-1):
             hidden.append(slim.fully_connected(dropout[layer], hidden_layers[layer], activation_fn=tf.nn.relu))
-            dropout.append(slim.dropout(hidden[layer], 1 - dropout_rate, is_training=True))
+            dropout.append(slim.dropout(hidden[layer], 1 - dropout_rate, is_training=self.istraining))
         hidden.append(slim.fully_connected(dropout[-1], hidden_layers[-1], activation_fn=tf.nn.relu)) #No dropout after final. explain
         logits = slim.fully_connected(hidden[-1], n_actions)
         self.output = tf.nn.softmax(logits)  + 1e-10
@@ -132,8 +135,12 @@ def run(env, learning_rate, n_states, n_actions, hidden_layers, dropout_rate, to
             value_history = []
             for step in range(max_steps):
 
+
                 obs_history.append(obs)
-                action = sess.run(actor.select_action, feed_dict={actor.input: [obs]})
+                if ep_count / total_episodes > 0.8:
+                    action = sess.run(actor.select_action, feed_dict={actor.input: [obs], actor.istraining: False})
+                else:
+                    action = sess.run(actor.select_action, feed_dict={actor.input: [obs], actor.istraining: True})
 
                 action_history.append(action)
                 action_strength = [(action - n_actions / 2) / (n_actions / 4)]
@@ -182,9 +189,16 @@ def run(env, learning_rate, n_states, n_actions, hidden_layers, dropout_rate, to
             disc_dell_history = step_weights(dell_history, gamma)
             norm_dell_history = normalize(dell_history)
 
-            feed_dict={actor.reward_holder: dell_history,
-                       actor.action_holder: action_history,
-                       actor.input: obs_history}
+            if ep_count / total_episodes > 0.8:
+                feed_dict = {actor.reward_holder: dell_history,
+                             actor.action_holder: action_history,
+                             actor.input: obs_history,
+                             actor.istraining: False}
+            else:
+                feed_dict = {actor.reward_holder: dell_history,
+                             actor.action_holder: action_history,
+                             actor.input: obs_history,
+                             actor.istraining: True}
 
             # print('dell:', dell_history)
             # print('action:', action_history)
@@ -219,6 +233,7 @@ def run(env, learning_rate, n_states, n_actions, hidden_layers, dropout_rate, to
 
             if ep_count % group_size == 0:
                 avg_rewards.append(np.mean(total_reward[-group_size:]))
+                print('episode:', ep_count)
                 print('reward:', np.mean(total_reward[-group_size:]))
 
         return avg_rewards
