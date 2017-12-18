@@ -16,7 +16,7 @@ if __name__ == "__main__":
     #Specify what we want to do
     problem = 'pendulum'
     method = 'pol_grad'
-    investigate = "dropout"
+    investigate = "actions"
 
     run_simulation = False
 
@@ -250,6 +250,7 @@ if __name__ == "__main__":
     elif problem == 'pendulum':
 
         env = gym.make('Pendulum-v0')
+
 
         # gamma is the discount factor
         gamma = 0.99
