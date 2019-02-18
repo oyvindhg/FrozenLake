@@ -5,4 +5,4 @@
 **Content:** Studies of reinforcement learning methods constitute the first part of my specialization project. Three simulation environments were used for implementation of reinforcement learning methods.
 The implemented methods spanned from simple tabular methods to more complex deep reinforcement learning methods utilizing artificial neural networks. Most methods studied in theory also worked well in practice, and parameters were tuned in order to improve and investigate each of the methods.
 
-[Link to part 2](https://github.com/oyvindhg/ComputerVision-ObjectDetection)
+[Link to part 2 of the project](https://github.com/oyvindhg/ComputerVision-ObjectDetection)
