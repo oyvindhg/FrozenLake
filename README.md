@@ -1,4 +1,4 @@
-# Specialization project - Part 1: Reinforcement Learning methods on OpenAI problems
+# Specialization project - Part 1: Reinforcement Learning Methods on OpenAI Problems
 
 **Description:** This is the code that consitutes the first part ofmy report from my specialization project during my penultimate semester of the Cybernetics and Robotics study program.
 
